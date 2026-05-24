@@ -303,7 +303,7 @@ tbody tr:last-child td{border-bottom:none}
     <div class="msc"><div class="ml">要観察(1)</div><div class="mv" id="ms-r1" style="color:#EF9F27">0</div></div>
     <div class="msc"><div class="ml">病畜(2)</div><div class="mv" id="ms-r2" style="color:#D85A30">0</div></div>
     <div class="msc"><div class="ml">重篤(3)</div><div class="mv" id="ms-r3" style="color:#E24B4A">0</div></div>
-    <div class="msc"><div class="ml">出荷済み</div><div class="mv" id="ms-sh" style="color:#aaa">0</div></div>
+
   </div>
 
   <!-- 凡例 -->
@@ -930,7 +930,7 @@ function renderMap(){
   document.getElementById('ms-r1').textContent=active.filter(c=>c.sickRank===1).length;
   document.getElementById('ms-r2').textContent=active.filter(c=>c.sickRank===2).length;
   document.getElementById('ms-r3').textContent=active.filter(c=>c.sickRank===3).length;
-  document.getElementById('ms-sh').textContent=Object.values(cattle).filter(c=>c&&c.shipped).length;
+  // 出荷済みはマップから削除するためカウント不要
 
   const customIds=BARNS.filter(b=>b.id.startsWith('c')).map(b=>b.id);
   const secs=[...BARN_SECS];
@@ -1036,7 +1036,7 @@ function doShip(){
   if(!selKey||!cattle[selKey])return;
   const c=cattle[selKey];
   if(!confirm(`${c.name||c.fullId} を出荷しますか？`))return;
-  c.shipped=true;
+  delete cattle[selKey];
   saveToStorage();
   document.getElementById('dpanel').style.display='none';
   selKey=null;renderMap();
