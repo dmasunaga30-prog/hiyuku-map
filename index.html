@@ -207,6 +207,7 @@ tbody tr:last-child td{border-bottom:none}
   <div class="nb on" id="nav-inp" onclick="goPage('inp')">📋 一括入力</div>
   <div class="nb"    id="nav-map" onclick="goPage('map')">🗺 牛舎マップ</div>
   <div class="nb" id="nav-trt" onclick="goPage('trt')">💉 治療履歴</div>
+  <div class="nb" id="nav-ops" onclick="goPage('ops')">🚚 出荷・移動</div>
 </div>
 
 <!-- ═══ 一括入力 ═══ -->
@@ -428,6 +429,56 @@ tbody tr:last-child td{border-bottom:none}
       </table>
     </div>
   </div>
+</div></div>
+
+
+<!-- 出荷・移動ページ -->
+<div class="pg" id="pg-ops"><div class="mxw">
+
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-size:13px;font-weight:600;color:#555;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      出荷・移動　<span id="ops-cnt" style="font-weight:400;color:#888">0頭入力中</span>
+      <span id="ops-sbar" style="display:flex;gap:6px"></span>
+    </div>
+    <div class="notice" style="margin-bottom:10px">
+      耳標の<strong>下5桁</strong>を入力すると現在地・個体情報を自動表示します。<br>
+      操作を選択して「実行」ボタンで一括処理。Enter/Tabで次行へ移動。
+    </div>
+    <div class="tw" style="max-height:500px;overflow-y:auto">
+      <table style="min-width:780px">
+        <thead><tr>
+          <th style="width:26px">#</th>
+          <th style="width:18px"></th>
+          <th style="min-width:100px">下5桁</th>
+          <th style="min-width:120px;color:#7a5c00">⚡ 現在地</th>
+          <th style="min-width:80px;color:#7a5c00">⚡ 性別</th>
+          <th style="min-width:55px;color:#7a5c00">⚡ 月齢</th>
+          <th style="min-width:55px;color:#7a5c00">⚡ ランク</th>
+          <th style="min-width:100px">操作</th>
+          <th style="min-width:130px">移動先の牛舎</th>
+          <th style="min-width:70px">移動先の部屋</th>
+        </tr></thead>
+        <tbody id="ops-body"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+      <button class="btn btn-sm" onclick="addOpsRows(5)">＋5行</button>
+      <button class="btn btn-sm" onclick="addOpsRows(10)">＋10行</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-sm" onclick="clearOps()">クリア</button>
+      <button class="btn" style="background:#E24B4A;color:#fff;border-color:#b52f2e;font-size:13px;padding:8px 20px" onclick="execOps()">✓ 実行する</button>
+    </div>
+  </div>
+
+  <!-- 実行結果 -->
+  <div id="ops-result" style="display:none">
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;color:#555;margin-bottom:10px">実行結果</div>
+      <div id="ops-result-body" style="font-size:13px;line-height:2"></div>
+      <button class="btn btn-sm" style="margin-top:10px" onclick="document.getElementById('ops-result').style.display='none'">閉じる</button>
+    </div>
+  </div>
+
 </div></div>
 
 <!-- モーダル -->
@@ -690,7 +741,7 @@ function restoreAndStart() {
 
 // ── ページ切替 ──
 function goPage(p){
-  ['inp','map','trt'].forEach(x=>{
+  ['inp','map','trt','ops'].forEach(x=>{
     const pg=document.getElementById('pg-'+x);
     const nb=document.getElementById('nav-'+x);
     if(pg) pg.classList.toggle('on',x===p);
@@ -698,6 +749,7 @@ function goPage(p){
   });
   if(p==='map') renderMap();
   if(p==='trt') renderTreatPage();
+  if(p==='ops' && opsRows.length===0) addOpsRows(5);
 }
 
 // ── 牛舎管理 ──
@@ -808,7 +860,7 @@ function doLookup(i,val){
   else{rows[i].status='multi';rows[i].lookup=null;openMod(i,val,res);}
   updCell(i);updateStats();
 }
-function hkey(e,i){if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();const n=document.getElementById('tag-'+(i+1));if(n)n.focus();}}
+function hkey(e,i){if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();if(typeof i==='number'){const n=document.getElementById('tag-'+(i+1));if(n)n.focus();}else{const n=document.getElementById(i);if(n)n.focus();}}}
 function updateStats(){
   const found=rows.filter(r=>r.status==='found').length;
   const multi=rows.filter(r=>r.status==='multi').length;
@@ -1509,6 +1561,231 @@ async function loadMapExcel(input) {
     console.error(e);
   }
   input.value = '';
+}
+
+
+// ━━━ 出荷・移動操作 ━━━
+let opsRows = [];
+let opsTimers = {};
+
+function addOpsRows(n) {
+  const tb = document.getElementById('ops-body');
+  if (!tb) return;
+  for (let i = 0; i < n; i++) {
+    const idx = opsRows.length;
+    opsRows.push({tag5:'', status:'empty', cattleKey:null, op:'ship', moveBarnId:'', movePen:''});
+    tb.insertAdjacentHTML('beforeend', buildOpsRow(idx));
+  }
+  updateOpsStats();
+}
+
+function buildOpsRow(i) {
+  const r = opsRows[i];
+  const c = r.cattleKey ? cattle[r.cattleKey] : null;
+  const sc = {found:'#1D9E75', notfound:'#E24B4A', empty:'#ddd'}[r.status] || '#ddd';
+  const ic = 'ci ' + ({found:'sf', notfound:'sn'}[r.status] || '');
+  const ok = c ? 'ok' : '';
+  const err = r.status === 'notfound' ? 'er' : '';
+  const b = c ? BARNS.find(x => x.id === c.barnId) : null;
+  const locTxt = c ? (b ? b.name + ' ' + c.pen + '部屋' : c.barnId) : (r.status==='notfound'?'見つかりません':'—');
+  const rankLabel = ['健康','要観察','病畜','重篤'];
+  const barnOptsHtml = '<option value="">牛舎を選択</option>' + BARNS.map(b2=>`<option value="${b2.id}"${b2.id===r.moveBarnId?' selected':''}>${b2.name}</option>`).join('');
+
+  return `<tr id="ops-row-${i}">
+    <td class="rn">${i+1}</td>
+    <td style="text-align:center;padding:0 3px"><span class="sdot" id="ops-dot-${i}" style="background:${sc}"></span></td>
+    <td><input class="ci ${ic}" id="ops-tag-${i}" type="text" inputmode="numeric" maxlength="5" placeholder="12345"
+      value="${r.tag5}" oninput="onOpsTag(${i},this.value)" onkeydown="hkey(event,'ops-tag-'+(${i}+1))"></td>
+    <td class="acell ${ok||err}" id="ops-loc-${i}">${locTxt}</td>
+    <td class="acell ${ok}" id="ops-sex-${i}">${c?c.sex:'—'}</td>
+    <td class="acell ${ok}" id="ops-age-${i}">${c?c.age+'ヶ月':'—'}</td>
+    <td class="acell ${ok}" id="ops-rank-${i}">${c?rankLabel[c.sickRank||0]:'—'}</td>
+    <td>
+      <select class="cs" id="ops-op-${i}" onchange="opsRows[${i}].op=this.value;updateOpsRow(${i})" style="width:90px">
+        <option value="ship"${r.op==='ship'?' selected':''}>出荷</option>
+        <option value="move"${r.op==='move'?' selected':''}>移動</option>
+      </select>
+    </td>
+    <td id="ops-dest-barn-cell-${i}"${r.op==='ship'?' style="opacity:.3;pointer-events:none"':''}>
+      <select class="cs" id="ops-dest-barn-${i}" onchange="opsRows[${i}].moveBarnId=this.value" style="width:120px">${barnOptsHtml}</select>
+    </td>
+    <td id="ops-dest-pen-cell-${i}"${r.op==='ship'?' style="opacity:.3;pointer-events:none"':''}>
+      <input class="ci" id="ops-dest-pen-${i}" type="number" inputmode="numeric" min="1" placeholder="空欄=自動"
+        value="${r.movePen||''}" style="width:65px" onchange="opsRows[${i}].movePen=this.value">
+    </td>
+  </tr>`;
+}
+
+function updateOpsRow(i) {
+  const r = opsRows[i];
+  const isMove = r.op === 'move';
+  const barnCell = document.getElementById('ops-dest-barn-cell-'+i);
+  const penCell = document.getElementById('ops-dest-pen-cell-'+i);
+  if (barnCell) barnCell.style.cssText = isMove ? '' : 'opacity:.3;pointer-events:none';
+  if (penCell) penCell.style.cssText = isMove ? '' : 'opacity:.3;pointer-events:none';
+}
+
+function onOpsTag(i, val) {
+  opsRows[i].tag5 = val;
+  opsRows[i].cattleKey = null;
+  opsRows[i].status = val.length === 5 ? 'searching' : 'empty';
+  clearTimeout(opsTimers[i]);
+  if (val.length === 5) {
+    opsTimers[i] = setTimeout(() => doOpsLookup(i, val), 300);
+  } else {
+    updateOpsCells(i);
+  }
+  updateOpsStats();
+}
+
+function doOpsLookup(i, val) {
+  // マップ上の個体を下5桁で検索
+  const found = Object.entries(cattle).find(([k, c]) => c && String(c.fullId).slice(-5) === val);
+  if (found) {
+    opsRows[i].status = 'found';
+    opsRows[i].cattleKey = found[0];
+  } else {
+    opsRows[i].status = 'notfound';
+    opsRows[i].cattleKey = null;
+  }
+  updateOpsCells(i);
+  updateOpsStats();
+}
+
+function updateOpsCells(i) {
+  const r = opsRows[i];
+  const c = r.cattleKey ? cattle[r.cattleKey] : null;
+  const sc = {found:'#1D9E75', notfound:'#E24B4A', searching:'#bbb', empty:'#ddd'}[r.status] || '#ddd';
+  const ic = 'ci ' + ({found:'sf', notfound:'sn', searching:'ss'}[r.status] || '');
+  const dot = document.getElementById('ops-dot-'+i);
+  const inp = document.getElementById('ops-tag-'+i);
+  if (dot) dot.style.background = sc;
+  if (inp) inp.className = ic;
+  const ok = c ? 'ok' : '';
+  const err = r.status === 'notfound' ? 'er' : '';
+  const b = c ? BARNS.find(x => x.id === c.barnId) : null;
+  const locTxt = c ? (b ? b.name + ' ' + c.pen + '部屋' : c.barnId) : (r.status==='notfound'?'マップにいません':'—');
+  const rankLabel = ['健康','要観察','病畜','重篤'];
+  const s = (id, cls, txt) => { const e = document.getElementById(id); if (e) { e.className='acell '+cls; e.textContent=txt; }};
+  s('ops-loc-'+i,  ok||err, locTxt);
+  s('ops-sex-'+i,  ok, c ? c.sex : '—');
+  s('ops-age-'+i,  ok, c ? c.age+'ヶ月' : '—');
+  s('ops-rank-'+i, ok, c ? rankLabel[c.sickRank||0] : '—');
+}
+
+// hkeyは共通定義を使用
+
+function updateOpsStats() {
+  const found = opsRows.filter(r=>r.status==='found').length;
+  const notfound = opsRows.filter(r=>r.status==='notfound').length;
+  const total = opsRows.filter(r=>r.tag5.length===5).length;
+  const el = document.getElementById('ops-cnt');
+  if (el) el.textContent = total + '頭入力中';
+  const sb = document.getElementById('ops-sbar');
+  if (sb) sb.innerHTML =
+    (found ? `<span class="chip c-ok">特定済 ${found}</span>` : '') +
+    (notfound ? `<span class="chip c-er">未登録 ${notfound}</span>` : '');
+}
+
+function execOps() {
+  const targets = opsRows.filter(r => r.status === 'found' && r.cattleKey);
+  if (!targets.length) { alert('処理対象の個体がありません。下5桁を入力してください。'); return; }
+
+  const ships = targets.filter(r => r.op === 'ship');
+  const moves = targets.filter(r => r.op === 'move');
+
+  // 移動先未選択チェック
+  const noDestMoves = moves.filter(r => !r.moveBarnId);
+  if (noDestMoves.length) { alert('移動先の牛舎が選択されていない行があります。'); return; }
+
+  const shipNames = ships.map(r => { const c=cattle[r.cattleKey]; return c?`#${String(c.fullId).slice(-5)} (${c.sex} ${c.age}ヶ月)`:r.tag5; });
+  const moveNames = moves.map(r => {
+    const c=cattle[r.cattleKey];
+    const b=BARNS.find(x=>x.id===r.moveBarnId)||{name:r.moveBarnId};
+    return c?`#${String(c.fullId).slice(-5)} → ${b.name}${r.movePen?r.movePen+'部屋':'(自動)'}`:r.tag5;
+  });
+
+  let msg = '';
+  if (ships.length) msg += `【出荷】${ships.length}頭
+${shipNames.join(', ')}
+`;
+  if (moves.length) msg += `【移動】${moves.length}頭
+${moveNames.join(', ')}`;
+  if (!confirm(msg + '\n\n実行しますか？')) return;
+
+  let results = [];
+
+  // 出荷処理
+  ships.forEach(r => {
+    const c = cattle[r.cattleKey];
+    if (!c) return;
+    delete cattle[r.cattleKey];
+    results.push(`<span style="color:#1a6b40">✓ 出荷</span>　#${String(c.fullId).slice(-5)} ${c.sex} ${c.age}ヶ月`);
+  });
+
+  // 移動処理
+  moves.forEach(r => {
+    const c = cattle[r.cattleKey];
+    if (!c) return;
+    const destBarn = BARNS.find(x => x.id === r.moveBarnId);
+    if (!destBarn) return;
+
+    let targetPen = r.movePen ? parseInt(r.movePen) : null;
+    let targetIdx = null;
+
+    if (targetPen) {
+      for (let idx = 0; idx < destBarn.penCap; idx++) {
+        const k = destBarn.id+':'+targetPen+':'+idx;
+        if (!cattle[k]) { targetIdx = idx; break; }
+      }
+    } else {
+      outer: for (let p = 1; p <= destBarn.penCount; p++) {
+        for (let idx = 0; idx < destBarn.penCap; idx++) {
+          const k = destBarn.id+':'+p+':'+idx;
+          if (!cattle[k]) { targetPen = p; targetIdx = idx; break outer; }
+        }
+      }
+    }
+
+    if (targetPen === null || targetIdx === null) {
+      results.push(`<span style="color:#c00">✗ 移動失敗</span>　#${String(c.fullId).slice(-5)} — 移動先が満舎です`);
+      return;
+    }
+
+    const fromBarn = BARNS.find(x => x.id === c.barnId) || {name: c.barnId};
+    const fromInfo = `${fromBarn.name} ${c.pen}部屋`;
+    const toInfo = `${destBarn.name} ${targetPen}部屋`;
+
+    delete cattle[r.cattleKey];
+    const newKey = destBarn.id+':'+targetPen+':'+targetIdx;
+    cattle[newKey] = {...c, barnId:destBarn.id, pen:targetPen, idx:targetIdx};
+    results.push(`<span style="color:#1a6b40">✓ 移動</span>　#${String(c.fullId).slice(-5)} ${c.sex} ${c.age}ヶ月　${fromInfo} → ${toInfo}`);
+  });
+
+  saveToStorage();
+  renderMap();
+
+  // 結果表示
+  const resDiv = document.getElementById('ops-result');
+  const resBody = document.getElementById('ops-result-body');
+  if (resDiv && resBody) {
+    resBody.innerHTML = results.join('<br>');
+    resDiv.style.display = 'block';
+    resDiv.scrollIntoView({behavior:'smooth'});
+  }
+
+  // 処理済み行をクリア
+  opsRows = opsRows.map(r => ({...r, tag5:'', status:'empty', cattleKey:null, moveBarnId:'', movePen:''}));
+  document.getElementById('ops-body').innerHTML = '';
+  opsRows.forEach((r, i) => document.getElementById('ops-body').insertAdjacentHTML('beforeend', buildOpsRow(i)));
+  updateOpsStats();
+}
+
+function clearOps() {
+  opsRows = [];
+  const tb = document.getElementById('ops-body');
+  if (tb) tb.innerHTML = '';
+  addOpsRows(5);
 }
 
 </script></body></html>
