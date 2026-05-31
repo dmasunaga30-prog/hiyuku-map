@@ -163,8 +163,61 @@ tbody tr:last-child td{border-bottom:none}
 .thi .td{color:#888;margin-right:6px}
 .thi .tm{font-weight:500}
 .thi .tn{color:#888;font-size:11px;margin-top:2px}
+
+/* F1（交雑種）白系 */
+.f1-y{background:#F5F5F5;border-color:#ccc;color:#333}
+.f1-m{background:#E0E0E0;border-color:#aaa;color:#222}
+.f1-o{background:#BDBDBD;border-color:#888;color:#111}
+/* 黒毛経産 紫系 */
+.keisan-y{background:#C39BD3;border-color:#9B59B6;color:#2c1a4a}
+.keisan-m{background:#8E44AD;border-color:#6C3483;color:#fff}
+.keisan-o{background:#5B2C6F;border-color:#3d1a4d;color:#fff}
+
+/* 餌食い */
+.pen.feed-a{border-color:#1D9E75;background:#f0fbf6}
+.pen.feed-b{border-color:#EF9F27;background:#fffbf0}
+.pen.feed-c{border-color:#E24B4A;background:#fff5f5}
+.pen-feed-badge{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:3px;flex-shrink:0}
+.pfb-a{background:#1D9E75;color:#fff}
+.pfb-b{background:#EF9F27;color:#3d2400}
+.pfb-c{background:#E24B4A;color:#fff}
+/* 餌食いモーダル */
+.feed-modal{background:#fff;border-radius:12px;padding:20px;width:380px;max-width:95vw}
+.feed-modal h3{font-size:15px;font-weight:600;margin-bottom:12px}
+.feed-abc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.feed-abc button{padding:14px 0;border-radius:8px;border:1.5px solid #ddd;background:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:all .1s}
+.feed-abc button:active{transform:scale(.96)}
+.fabc-a{border-color:#1D9E75!important;background:#e8f5ee!important;color:#085041}
+.fabc-b{border-color:#EF9F27!important;background:#fff8e6!important;color:#5c3a00}
+.fabc-c{border-color:#E24B4A!important;background:#ffeaea!important;color:#791f1f}
+.feed-hist{max-height:180px;overflow-y:auto;margin-top:10px;font-size:12px}
+.fhi{padding:5px 0;border-bottom:.5px solid #f0efe8;display:flex;gap:8px}
+.fhi:last-child{border-bottom:none}
+.fhi .fd{color:#888;flex-shrink:0}
+
+/* レポート */
+.rpt-section{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:16px;margin-bottom:14px}
+.rpt-section h3{font-size:14px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0efe8;display:flex;align-items:center;gap:6px}
+.rpt-alert{background:#ffeaea;border:1px solid #F09595;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px}
+.rpt-alert.warn{background:#fff8e6;border-color:#f5c842}
+.rpt-alert.ok{background:#e8f5ee;border-color:#b7e4c7}
+.rpt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px}
+.rpt-card{background:#f8f7f2;border-radius:8px;padding:10px 12px}
+.rpt-card .rl{font-size:11px;color:#888;margin-bottom:3px}
+.rpt-card .rv{font-size:20px;font-weight:600;color:#1a1a1a}
+.rpt-card .rs{font-size:11px;color:#888;margin-top:2px}
+.rpt-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.rpt-table th{background:#f5f4ef;padding:6px 10px;text-align:left;font-size:11px;font-weight:600;color:#666;border-bottom:1px solid #e0dfd8}
+.rpt-table td{padding:6px 10px;border-bottom:1px solid #f0efe8}
+.rpt-table tr:last-child td{border-bottom:none}
+.badge-red{background:#ffeaea;color:#c00;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500}
+.badge-orange{background:#fff8e6;color:#7a5c00;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500}
+.badge-green{background:#e8f5ee;color:#1a6b40;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500}
+.badge-gray{background:#f0efe8;color:#555;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500}
+@media print{.nav,.rpt-section .btn,.btn-row{display:none!important}#pg-rpt{display:block!important;padding:0}body{background:#fff}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div id="lov" class="lov">
@@ -208,6 +261,7 @@ tbody tr:last-child td{border-bottom:none}
   <div class="nb"    id="nav-map" onclick="goPage('map')">🗺 牛舎マップ</div>
   <div class="nb" id="nav-trt" onclick="goPage('trt')">💉 治療履歴</div>
   <div class="nb" id="nav-ops" onclick="goPage('ops')">🚚 出荷・移動</div>
+  <div class="nb" id="nav-rpt" onclick="goPage('rpt')">📋 健康レポート</div>
 </div>
 
 <!-- ═══ 一括入力 ═══ -->
@@ -310,11 +364,27 @@ tbody tr:last-child td{border-bottom:none}
   <!-- 凡例 -->
   <div class="legend">
     <div class="leg-sec">
-      <div class="leg-ttl">月齢（健康時）</div>
+      <div class="leg-ttl">黒毛和種（健康）</div>
       <div class="leg-items">
         <div class="leg"><div class="ldot" style="background:#7BC8A4"></div>〜12ヶ月</div>
         <div class="leg"><div class="ldot" style="background:#1D9E75"></div>13〜22ヶ月</div>
         <div class="leg"><div class="ldot" style="background:#1a6b40"></div>23ヶ月〜</div>
+      </div>
+    </div>
+    <div class="leg-sec">
+      <div class="leg-ttl">F1・交雑種（健康）</div>
+      <div class="leg-items">
+        <div class="leg"><div class="ldot" style="background:#F5F5F5;border:1px solid #ccc"></div>〜12ヶ月</div>
+        <div class="leg"><div class="ldot" style="background:#E0E0E0;border:1px solid #aaa"></div>13〜22ヶ月</div>
+        <div class="leg"><div class="ldot" style="background:#BDBDBD;border:1px solid #888"></div>23ヶ月〜</div>
+      </div>
+    </div>
+    <div class="leg-sec">
+      <div class="leg-ttl">黒毛経産（導入後月数）</div>
+      <div class="leg-items">
+        <div class="leg"><div class="ldot" style="background:#C39BD3"></div>〜3ヶ月</div>
+        <div class="leg"><div class="ldot" style="background:#8E44AD"></div>4〜9ヶ月</div>
+        <div class="leg"><div class="ldot" style="background:#5B2C6F"></div>10ヶ月〜</div>
       </div>
     </div>
     <div class="leg-sec">
@@ -333,19 +403,12 @@ tbody tr:last-child td{border-bottom:none}
         <div class="leg"><div class="ldot" style="background:#b03a12"></div>23ヶ月〜</div>
       </div>
     </div>
-    <div class="leg-sec">
+    <div class="leg-sec" style="border-right:none">
       <div class="leg-ttl">重篤（ランク3）</div>
       <div class="leg-items">
         <div class="leg"><div class="ldot" style="background:#F09595"></div>〜12ヶ月</div>
         <div class="leg"><div class="ldot" style="background:#E24B4A"></div>13〜22ヶ月</div>
         <div class="leg"><div class="ldot" style="background:#961f1e"></div>23ヶ月〜</div>
-      </div>
-    </div>
-    <div class="leg-sec" style="border-right:none">
-      <div class="leg-ttl">その他</div>
-      <div class="leg-items">
-        <div class="leg"><div class="ldot" style="background:#ddd"></div>出荷済</div>
-        <div class="leg"><div class="ldot" style="background:#f5f4ef;border:1px dashed #ddd"></div>空き</div>
       </div>
     </div>
   </div>
@@ -363,6 +426,16 @@ tbody tr:last-child td{border-bottom:none}
   </div>
 
 
+  <!-- 検索バー -->
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <input type="text" id="map-search-input" inputmode="numeric" maxlength="5"
+      placeholder="🔍 下5桁で検索..."
+      style="font-size:14px;padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;width:200px;outline:none"
+      oninput="searchMap(this.value)"
+      onkeydown="if(event.key==='Escape'){this.value='';searchMap('');}">
+    <span id="map-search-result" style="font-size:13px;color:#888"></span>
+    <button class="btn btn-sm" onclick="document.getElementById('map-search-input').value='';searchMap('')">クリア</button>
+  </div>
   <div id="msecs"></div>
 
   <!-- 詳細パネル -->
@@ -382,6 +455,10 @@ tbody tr:last-child td{border-bottom:none}
       <div style="font-size:12px;font-weight:600;color:#854F0B;margin-bottom:4px">💉 治療履歴</div>
       <div class="treat-hist" id="dp-th-list"></div>
     </div>
+    <div id="dp-feed" style="margin-top:12px;display:none">
+      <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:4px">🌾 餌食い履歴</div>
+      <div class="treat-hist" id="dp-feed-list"></div>
+    </div>
   </div>
 </div></div>
 
@@ -397,6 +474,11 @@ tbody tr:last-child td{border-bottom:none}
         <input type="file" id="treat-file-inp" accept=".xlsx,.xlsm" style="display:none" onchange="loadTreatFile(this)">
       </label>
     </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+    <button class="btn btn-sm" onclick="exportExcel()" style="background:#217346;color:#fff;border-color:#155724">
+      📊 治療レポートをExcelで出力
+    </button>
   </div>
   <div class="card" style="margin-bottom:10px">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -481,6 +563,88 @@ tbody tr:last-child td{border-bottom:none}
 
 </div></div>
 
+
+<!-- 餌食いモーダル -->
+<div id="feed-mbg" class="mbg" style="display:none" onclick="closeFeedModal(event)">
+  <div class="feed-modal" onclick="event.stopPropagation()">
+    <h3 id="feed-modal-title">餌食い記録</h3>
+    <div style="font-size:12px;color:#888;margin-bottom:10px" id="feed-modal-sub"></div>
+    <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:6px">判定を選択</div>
+    <div class="feed-abc">
+      <button class="fabc-a" onclick="recordFeed('A')">A<br><span style="font-size:10px;font-weight:400">良好</span></button>
+      <button class="fabc-b" onclick="recordFeed('B')">B<br><span style="font-size:10px;font-weight:400">要注意</span></button>
+      <button class="fabc-c" onclick="recordFeed('C')">C<br><span style="font-size:10px;font-weight:400">悪化</span></button>
+    </div>
+    <div style="margin-top:8px">
+      <input type="text" id="feed-note-input" placeholder="メモ（任意）"
+        style="width:100%;font-size:13px;padding:7px 10px;border:1px solid #ddd;border-radius:6px">
+    </div>
+    <div style="font-size:12px;font-weight:600;color:#555;margin-top:12px;margin-bottom:4px">記録履歴</div>
+    <div class="feed-hist" id="feed-hist-list">
+      <div style="color:#aaa;font-size:12px">記録なし</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-sm" onclick="clearFeedRecord()" style="color:#c00;border-color:#ffaaaa">記録を削除</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-sm" onclick="closeFeedModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- 健康管理レポートページ -->
+<div class="pg" id="pg-rpt"><div class="mxw">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:16px;font-weight:600;color:#333">📋 牛群健康管理レポート</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-sm" onclick="buildReport()">🔄 更新</button>
+      <button class="btn btn-sm" onclick="window.print()" style="background:#1a5276;color:#fff;border-color:#0d3349">🖨️ 印刷</button>
+    </div>
+  </div>
+  <div id="rpt-date" style="font-size:12px;color:#888;margin-bottom:10px"></div>
+  <!-- フィルター -->
+  <div style="background:#fff;border:1px solid #e0dfd8;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <span style="font-size:13px;font-weight:500;color:#555">期間：</span>
+      <input type="month" id="rpt-from" style="font-size:13px;padding:5px 8px;border:1px solid #ddd;border-radius:6px">
+      <span style="font-size:12px;color:#888">〜</span>
+      <input type="month" id="rpt-to" style="font-size:13px;padding:5px 8px;border:1px solid #ddd;border-radius:6px">
+      <button class="btn btn-sm" onclick="buildReport()" style="background:#1D9E75;color:#fff;border-color:#0F6E56">適用</button>
+      <button class="btn btn-sm" onclick="clearRptFilter()">全期間</button>
+      <span id="rpt-period-label" style="font-size:12px;color:#888;margin-left:4px"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:500;color:#555;padding-top:4px">農場：</span>
+      <div id="rpt-barn-filter" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+      <button class="btn btn-sm" onclick="rptSelectAllBarns()">全選択</button>
+      <button class="btn btn-sm" onclick="rptClearBarns()">全解除</button>
+    </div>
+  </div>
+  <!-- グラフエリア -->
+  <div id="rpt-charts" style="display:none;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div style="background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">📈 月別治療件数推移</div>
+        <canvas id="chart-treat" height="180"></canvas>
+      </div>
+      <div style="background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#c00;margin-bottom:8px">💀 月別死亡（品種別）</div>
+        <canvas id="chart-death" height="160"></canvas>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div></div>
+      <div style="background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#7a5c00;margin-bottom:8px">🚨 月別緊急と畜（品種別）</div>
+        <canvas id="chart-urgent" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+  <div id="rpt-content">
+    <div style="color:#aaa;text-align:center;padding:40px">肥育台帳と健康管理台帳を読み込んでからレポートを表示します</div>
+  </div>
+</div></div>
+
 <!-- モーダル -->
 <div id="mbg" class="mbg" style="display:none" onclick="closeMod(event)">
   <div class="modal" onclick="event.stopPropagation()">
@@ -535,7 +699,12 @@ const BARN_SECS=[
   {label:'Mシリーズ（小）',ids:['M9','M10','M11','M12','M13','M14','M15','M16','M17']},
   {label:'その他',         ids:['J','I']},
 ];
-let DB=null,rows=[],cattle={},modalCB=null,timers={},idCtr=1000,selKey=null;
+let feedData={};
+let lossLedgerData=[]; // 肥育台帳から読み込んだ死亡・緊急と畜
+// key:"barnId:pen" → [{date,grade,note,cattleSnap}]
+let lossData=[]; // [{date,tag5,type:death/urgent,barnId,pen,note,c}]
+let DB=null,rows=[],cattle={},
+modalCB=null,timers={},idCtr=1000,selKey=null;
 const DEFAULT_BARNS=[
   {id:'1',name:'1号舎',penCount:24,penCap:6},{id:'2',name:'2号舎',penCount:24,penCap:6},{id:'3',name:'3号舎',penCount:24,penCap:6},
   {id:'4',name:'4号舎',penCount:24,penCap:6},{id:'5',name:'5号舎',penCount:24,penCap:6},{id:'6',name:'6号舎',penCount:24,penCap:6},
@@ -629,12 +798,125 @@ async function parseLedgerExcel(arrayBuffer, statusCallback) {
 
       const tag5 = fullId.slice(-5);
       if (!tag5map[tag5]) tag5map[tag5] = [];
-      tag5map[tag5].push([fullId, name, sex, dobStr || '', Math.floor(age)]);
+      // 品種判定: 名号に「交雑種」を含む→F1、経産シート→黒毛経産、それ以外→黒毛
+      const breed = isKeisan ? 'K' : (name.includes('交雑種') ? 'F1' : 'K');
+      // 導入年月日
+      const introCol = isKeisan ? 13 : 12;
+      const introVal = row[introCol];
+      const introDate = introVal && introVal instanceof Date ? introVal : (introVal ? new Date(introVal) : null);
+      const introStr = introDate && !isNaN(introDate) ? introDate.toISOString().slice(0,10) : '';
+      // 導入先（自家産判定）
+      const introSrcCol = isKeisan ? 17 : 16;
+      const introSrcRaw = row[introSrcCol] ? String(row[introSrcCol]).trim() : '';
+      const origin = breed==='F1' ? '導入' : (introSrcRaw.includes('格上') ? '自家産' : '導入');
+      tag5map[tag5].push([fullId, name, sex, dobStr || '', Math.floor(age), breed, introStr, origin]);
     }
   }
 
   statusCallback('完了');
   return tag5map;
+}
+
+// 肥育台帳から死亡・緊急と畜を収集（parseLedgerExcelと同じXLSXオブジェクトを使う想定）
+async function parseLossFromLedger(arrayBuffer, statusCallback){
+  statusCallback('死亡・緊急データを読み込み中...');
+  const wb2 = XLSX.read(arrayBuffer, {type:'array', cellDates:true});
+  lossLedgerData = [];
+  const today = new Date();
+
+  const KEISAN = new Set(['株経産-本社','畜株経産-本社','株経産-有明','株経産-池添',
+    '畜株経産-西田','畜株経産-田畑','平松正弘-本社','平松正弘-梅ケ谷',
+    '平松正弘-徳之島','㈱澁谷','平松正弘-ミツナガ','平松タイシ','ET供卵牛','経産-大崎','畜株経産-大根占']);
+
+  for(const sname of wb2.SheetNames){
+    const ws2 = wb2.Sheets[sname];
+    const data = XLSX.utils.sheet_to_json(ws2, {header:1, defval:null});
+
+    // ヘッダー行探索
+    let hIdx=-1;
+    for(let i=0;i<Math.min(data.length,5);i++){
+      const row=data[i].map(v=>v===null?'':String(v));
+      if(row.includes('全国耳標')||row.includes('個体識別番号')){hIdx=i;break;}
+    }
+    if(hIdx<0) continue;
+
+    const hdr = data[hIdx].map(v=>v===null?'':String(v));
+    const idCol      = hdr.findIndex(h=>h==='全国耳標'||h==='個体識別番号');
+    const hikuCol    = hdr.findIndex(h=>h==='肥育耳標'||h==='肥育番号');
+    const nameCol    = hdr.findIndex(h=>h==='名号');
+    const sexCol     = hdr.findIndex(h=>h==='性別');
+    const ageCol     = hdr.findIndex(h=>h==='月齢');
+    const shipDateCol= hdr.findIndex(h=>h==='出荷日');
+    const introCol   = hdr.findIndex(h=>h==='導入年月日');
+    // 出荷後価格列 = 出荷日の右隣で「価格」
+    // 出荷日の右隣が「価格」または「せり価格」を探す
+    let shipPriceCol = -1;
+    if(shipDateCol>=0){
+      for(let ci=shipDateCol+1; ci<=Math.min(shipDateCol+3, hdr.length-1); ci++){
+        if(hdr[ci]==='価格'||hdr[ci]==='せり価格'||hdr[ci]==='競り価格'){
+          shipPriceCol=ci; break;
+        }
+      }
+    }
+    if(shipPriceCol<0) continue;
+
+    const isKeisan = KEISAN.has(sname);
+
+    for(let i=hIdx+1;i<data.length;i++){
+      const row=data[i];
+      if(!row||row.length<=shipPriceCol) continue;
+      const price = row[shipPriceCol]?String(row[shipPriceCol]).trim():'';
+      if(!price.includes('死亡')&&!price.includes('緊急')) continue;
+
+      const fullId = row[idCol]?String(row[idCol]).replace(/\.0$/,'').trim():'';
+      const hiku   = row[hikuCol]?String(row[hikuCol]).replace(/\.0$/,'').trim():'';
+      const name   = row[nameCol]?String(row[nameCol]).trim():'';
+      const sex    = row[sexCol]?String(row[sexCol]).trim():'';
+      const age    = row[ageCol]?parseFloat(String(row[ageCol]).replace('ヶ月','')):null;
+      const tag5   = fullId.length>=5?fullId.slice(-5):(hiku.length>=5?hiku.slice(-5):'');
+      // 出荷日（死亡・緊急発生日として使用）
+      const shipDateVal = shipDateCol>=0&&row[shipDateCol] ? row[shipDateCol] : null;
+      let shipDate = null;
+      if(shipDateVal){
+        if(shipDateVal instanceof Date){ shipDate=shipDateVal; }
+        else if(typeof shipDateVal==='number'){
+          // Excelシリアル値→Date変換
+          shipDate = new Date((shipDateVal-25569)*86400*1000);
+        } else {
+          shipDate = new Date(String(shipDateVal).replace(/\//g,'-'));
+        }
+        if(isNaN(shipDate)) shipDate=null;
+      }
+      const shipDateStr = shipDate ? shipDate.toISOString().slice(0,10) : '';
+
+      // 品種判定
+      const breed = isKeisan?'KEI':(name.includes('交雑種')?'F1':'K');
+      // 自家産判定
+      const introSrcCol = isKeisan?17:16;
+      const introSrcRaw = row[introSrcCol]?String(row[introSrcCol]).trim():'';
+      const origin = breed==='F1'?'導入':(introSrcRaw.includes('格上')?'自家産':'導入');
+
+      // 導入後月数（経産）
+      let introMonthsVal = null;
+      if(introCol>=0 && row[introCol]){
+        const iv = row[introCol] instanceof Date ? row[introCol] : new Date(row[introCol]);
+        if(!isNaN(iv)) introMonthsVal = Math.floor((today-iv)/(1000*60*60*24*30.44));
+      }
+
+      lossLedgerData.push({
+        sheet: sname,
+        fullId, tag5, name, sex,
+        age: age||0,
+        breed, origin,
+        introMonths: introMonthsVal,
+        price,
+        date: shipDate,
+        dateStr: shipDateStr,
+        type: price.includes('死亡')?'death':'urgent'
+      });
+    }
+  }
+  return lossLedgerData;
 }
 
 // ── 起動時：ファイル選択から読み込み ──
@@ -663,6 +945,8 @@ async function loadFromFile(input) {
     if (el1) el1.textContent = statusText;
     if (el2) el2.textContent = statusText;
 
+    // 死亡・緊急データも同じファイルから収集
+    await parseLossFromLedger(buf, ()=>{});
     // 既存のローカルストレージデータを復元してからマップ表示
     loadFromStorage();
     setTimeout(() => {
@@ -689,6 +973,7 @@ async function updateLedger(input) {
   try {
     const buf = await file.arrayBuffer();
     DB = await parseLedgerExcel(buf, () => {});
+    await parseLossFromLedger(buf, ()=>{});
     const total = Object.keys(DB).length;
     const dateStr = new Date().toLocaleDateString('ja-JP');
     const statusText = `台帳: ${total.toLocaleString()}件 ／ ${file.name} ／ ${dateStr}`;
@@ -741,7 +1026,7 @@ function restoreAndStart() {
 
 // ── ページ切替 ──
 function goPage(p){
-  ['inp','map','trt','ops'].forEach(x=>{
+  ['inp','map','trt','ops','rpt'].forEach(x=>{
     const pg=document.getElementById('pg-'+x);
     const nb=document.getElementById('nav-'+x);
     if(pg) pg.classList.toggle('on',x===p);
@@ -750,6 +1035,22 @@ function goPage(p){
   if(p==='map') renderMap();
   if(p==='trt') renderTreatPage();
   if(p==='ops' && opsRows.length===0) addOpsRows(5);
+  if(p==='rpt'){
+    // 初回のみデフォルト期間を設定（過去6ヶ月）
+    const fromEl=document.getElementById('rpt-from');
+    const toEl=document.getElementById('rpt-to');
+    if(!fromEl.value&&!toEl.value&&TREAT_DATA.length){
+      const dates=TREAT_DATA.filter(t=>t.date).map(t=>t.date).sort((a,b)=>b-a);
+      if(dates.length){
+        const latest=dates[0];
+        const earliest=new Date(latest); earliest.setMonth(earliest.getMonth()-1);
+        toEl.value=getMonthKey(latest);
+        fromEl.value=getMonthKey(earliest);
+      }
+    }
+    renderRptBarnFilter();
+    buildReport();
+  }
 }
 
 // ── 牛舎管理 ──
@@ -945,7 +1246,8 @@ function doRegister(){
     if(targetPen===null||targetIdx===null)return;
     const k=penKey(r.barnId,targetPen,targetIdx);
     cattle[k]={fullId:r.lookup[0],name:r.lookup[1]||'',sex:SEX_MAP[r.lookup[2]]||r.lookup[2],
-      dob:r.lookup[3],age:r.lookup[4],sickRank:0,treatCount:0,
+      dob:r.lookup[3],age:r.lookup[4],breed:r.lookup[5]||'K',introDate:r.lookup[6]||'',origin:r.lookup[7]||'導入',
+      sickRank:0,treatCount:0,
       barnId:r.barnId,pen:targetPen,idx:targetIdx,shipped:false};
     ok++;
   });
@@ -962,16 +1264,40 @@ function nextInput(){
 }
 
 // ── カラー判定 ──
-function cellClass(c){
-  if(!c||c.shipped) return 'shipped';
-  const age=c.age||0;
-  const phase=age<=12?'y':age<=22?'m':'o';
-  const rank=c.sickRank||0;
-  if(rank===0) return `age-${phase}`;
-  return `rank${rank}-${phase}`;
+function introMonths(c){
+  if(!c||!c.introDate) return 0;
+  const d=new Date(c.introDate);
+  return isNaN(d)?0:Math.floor((new Date()-d)/(1000*60*60*24*30.44));
 }
-function ageLabel(age){
-  return age<=12?`${age}m`:age<=22?`${age}m`:`${age}m`;
+
+function cellLabel(c){
+  if(!c) return '';
+  if(c.sex==='経産') return String(introMonths(c));
+  return String(c.age||'');
+}
+
+function cellClass(c){
+  if(!c) return '';
+  const rank=c.sickRank||0;
+  if(rank>0){
+    const age=c.age||0;
+    const ph=age<=12?'y':age<=22?'m':'o';
+    return `rank${rank}-${ph}`;
+  }
+  // ランク0: 品種・性別で色分け
+  if(c.sex==='経産'){
+    const mo=introMonths(c);
+    return mo<=3?'keisan-y':mo<=9?'keisan-m':'keisan-o';
+  }
+  if((c.breed||'K')==='F1'){
+    const age=c.age||0;
+    const ph=age<=12?'y':age<=22?'m':'o';
+    return `f1-${ph}`;
+  }
+  // 黒毛和種（未経産・去勢）
+  const age=c.age||0;
+  const ph=age<=12?'y':age<=22?'m':'o';
+  return `age-${ph}`;
 }
 
 // ── マップ描画 ──
@@ -1007,13 +1333,19 @@ function renderMap(){
           const cls=cellClass(c);
           const tip=`${c.name||''} #${c.fullId} ${c.sex} ${c.age}ヶ月 ランク${c.sickRank} ${b.name}${penNo}部屋`;
           const treatCnt=TREAT_DATA.filter(function(t){return t.tag5===String(c.fullId).slice(-5);}).length;
+          const _lbl=cellLabel(c);
           const cellInner=treatCnt>0
-            ?`<span style="font-size:11px;font-weight:700;line-height:1">${c.age}</span><span style="font-size:8px;opacity:.85;line-height:1">×${treatCnt}</span>`
-            :`<span style="font-size:12px;font-weight:700">${c.age}</span>`;
-          return`<div class="cc ${cls}" title="${tip}" onclick="clickCell('${b.id}',${penNo},${idx})" style="flex-direction:column;gap:1px">${cellInner}</div>`;
+            ?`<span style="font-size:11px;font-weight:700;line-height:1">${_lbl}</span><span style="font-size:8px;opacity:.85;line-height:1">×${treatCnt}</span>`
+            :`<span style="font-size:12px;font-weight:700">${_lbl}</span>`;
+          return`<div class="cc ${cls}" id="cell-${b.id}-${penNo}-${idx}" title="${tip}" onclick="clickCell('${b.id}',${penNo},${idx})" style="flex-direction:column;gap:1px">${cellInner}</div>`;
         }).join('');
-        return`<div class="pen">
-          <div class="pen-num">${penNo}</div>
+        const feedKey=b.id+':'+penNo;
+        const feedHist=feedData[feedKey]||[];
+        const lastFeed=feedHist.length?feedHist[feedHist.length-1]:null;
+        const feedCls=lastFeed?('feed-'+lastFeed.grade.toLowerCase()):'';
+        const feedBadge=lastFeed?`<span class="pen-feed-badge pfb-${lastFeed.grade.toLowerCase()}">${lastFeed.grade}</span>`:'';
+        return`<div class="pen ${feedCls}" onclick="if(event.target.classList.contains('pen')||event.target.classList.contains('pen-num')||event.target.classList.contains('pen-feed-badge'))openFeedModal('${b.id}',${penNo})">
+          <div class="pen-num">${penNo}${feedBadge}</div>
           <div class="pen-cells">${cells}</div>
         </div>`;
       }).join('');
@@ -1041,15 +1373,21 @@ function clickCell(barnId,pen,idx){
   const dp=document.getElementById('dpanel');
   const rankLabel=['健康','要観察','病畜','重篤'];
   document.getElementById('dp-ttl').textContent=`${b.name} ${pen}部屋　${c.name||''}`;
-  document.getElementById('dp-body').innerHTML=`
-    <div class="drow"><span class="dk">個体識別番号</span><span class="dv">${c.fullId}</span></div>
-    <div class="drow"><span class="dk">名号</span><span class="dv">${c.name||'—'}</span></div>
-    <div class="drow"><span class="dk">性別</span><span class="dv">${c.sex}</span></div>
-    <div class="drow"><span class="dk">生年月日</span><span class="dv">${c.dob}</span></div>
-    <div class="drow"><span class="dk">月齢</span><span class="dv">${c.age}ヶ月</span></div>
-    <div class="drow"><span class="dk">病畜ランク</span><span class="dv">${rankLabel[c.sickRank||0]}</span></div>
-    <div class="drow"><span class="dk">治療回数</span><span class="dv">${c.treatCount||0}回</span></div>
-    <div class="drow"><span class="dk">場所</span><span class="dv">${b.name} ${pen}部屋</span></div>`;
+  const _isKeisan=(c.sex==='経産');
+  const _introMo=_isKeisan?introMonths(c):null;
+  const _introHtml=_isKeisan?('<div class="drow"><span class="dk">導入日</span><span class="dv">'+(c.introDate||'—')+'</span></div><div class="drow"><span class="dk">導入後月数</span><span class="dv">'+_introMo+'ヶ月</span></div>'):'';
+  document.getElementById('dp-body').innerHTML=
+    '<div class="drow"><span class="dk">個体識別番号</span><span class="dv">'+c.fullId+'</span></div>'+
+    '<div class="drow"><span class="dk">名号</span><span class="dv">'+(c.name||'—')+'</span></div>'+
+    '<div class="drow"><span class="dk">品種</span><span class="dv">'+(c.breed==='F1'?'F1（交雑種）':_isKeisan?'黒毛和種（経産）':'黒毛和種')+'</span></div>'+
+    '<div class="drow"><span class="dk">性別</span><span class="dv">'+c.sex+'</span></div>'+
+    '<div class="drow"><span class="dk">生年月日</span><span class="dv">'+c.dob+'</span></div>'+
+    '<div class="drow"><span class="dk">月齢</span><span class="dv">'+c.age+'ヶ月</span></div>'+
+    _introHtml+
+    '<div class="drow"><span class="dk">病畜ランク</span><span class="dv">'+rankLabel[c.sickRank||0]+'</span></div>'+
+    '<div class="drow"><span class="dk">治療回数</span><span class="dv">'+(c.treatCount||0)+'回</span></div>'+
+    '<div class="drow"><span class="dk">場所</span><span class="dv">'+b.name+' '+pen+'部屋</span></div>';
+
   document.getElementById('rbtns').innerHTML=
     ['0-健康','1-要観察','2-病畜','3-重篤'].map((lbl,ri)=>
       `<button class="rbtn r${ri}${(c.sickRank||0)===ri?' sel':''}" onclick="setRank(${ri})">${lbl}</button>`
@@ -1069,6 +1407,26 @@ function clickCell(barnId,pen,idx){
       _thList.innerHTML='<div style="color:#aaa;font-size:12px;padding:8px 0">治療記録なし</div>';
     } else {
       _thList.innerHTML=_hist.map(t=>'<div class="thi"><span class="td">'+t.dateStr+'</span><span class="tm">'+(t.method||'—')+'</span>'+(t.note?'<div class="tn">'+t.note+'</div>':'')+'</div>').join('');
+    }
+  }
+  // 餌食い履歴表示
+  const _feedDiv = document.getElementById('dp-feed');
+  const _feedList = document.getElementById('dp-feed-list');
+  if(_feedDiv && _feedList){
+    const _fhist = c.feedHist && c.feedHist.length ? c.feedHist.slice().reverse() : [];
+    if(_fhist.length){
+      _feedDiv.style.display='block';
+      _feedList.innerHTML=_fhist.map(h=>{
+        const cls='pfb-'+h.grade.toLowerCase();
+        const b2=BARNS.find(x=>x.id===h.barn)||{name:h.barn};
+        return`<div class="fhi">
+          <span class="fd">${h.date}</span>
+          <span class="pen-feed-badge ${cls}">${h.grade}</span>
+          <span>${b2.name} ${h.pen}部屋${h.note?' / '+h.note:''}</span>
+        </div>`;
+      }).join('');
+    } else {
+      _feedDiv.style.display='none';
     }
   }
   dp.style.display='block';
@@ -1302,6 +1660,44 @@ function exportExcel() {
   wsSumm['!cols']=[10,8,8,8,6,8,6,6,8,6].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, wsSumm, '牛舎別サマリー');
 
+  // ── シート4: 治療レポート ──
+  if(TREAT_DATA.length){
+    const tData=[['日付','牛舎・ペン','耳標(下5桁)','治療方法','体温','備考',
+                  '個体識別番号','名号','品種','性別','月齢','病畜ランク']];
+    const rankLbl=['健康','要観察','病畜','重篤'];
+    TREAT_DATA.slice().sort((a,b)=>b.date-a.date).forEach(t=>{
+      // 治療時点の個体情報をマップから検索
+      const entry=Object.values(cattle).find(c=>c&&String(c.fullId).slice(-5)===t.tag5);
+      const breedLbl=!entry?'—':entry.breed==='F1'?'F1（交雑種）':entry.sex==='経産'?'黒毛和種（経産）':'黒毛和種';
+      tData.push([
+        t.dateStr, t.barn, t.tag5, t.method||'—', t.temp||'—', t.note||'—',
+        entry?entry.fullId:'—', entry?entry.name||'—':'—',
+        breedLbl, entry?entry.sex:'—',
+        entry?entry.age+'ヶ月':'—',
+        entry?rankLbl[entry.sickRank||0]:'—'
+      ]);
+    });
+    const wsTreat=XLSX.utils.aoa_to_sheet(tData);
+    wsTreat['!cols']=[10,12,10,20,8,16,14,12,12,6,8,8].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, wsTreat, '治療レポート');
+  }
+
+  // ── シート5: 餌食いレポート ──
+  const feedKeys=Object.keys(feedData);
+  if(feedKeys.length){
+    const fData=[['日付','牛舎','部屋','判定','メモ','在舎耳標（記録時）']];
+    feedKeys.forEach(key=>{
+      const [barnId,pen]=key.split(':');
+      const b=BARNS.find(x=>x.id===barnId)||{name:barnId};
+      (feedData[key]||[]).forEach(h=>{
+        fData.push([h.date, b.name, pen+'部屋', h.grade, h.note||'', (h.cattle||[]).join(', ')]);
+      });
+    });
+    const wsFeed=XLSX.utils.aoa_to_sheet(fData);
+    wsFeed['!cols']=[10,10,8,6,16,30].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, wsFeed, '餌食いレポート');
+  }
+
   const ds=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
   XLSX.writeFile(wb, '肥育牛舎マップ_'+ds+'.xlsx');
 }
@@ -1357,8 +1753,17 @@ async function loadTreatFile(input){
         temp:row[5]?String(row[5]).split('\n')[0].replace('AM:','').trim():'',
         note:row[6]?String(row[6]).replace(/\n/g,' ').trim():''});
     }
+    // 台帳から死亡・緊急出荷を自動取得
+    TREAT_DATA.filter(t=>t.eventType==='death'||t.eventType==='urgent').forEach(t=>{
+      if(!lossData.find(l=>l.tag5===t.tag5&&l.date===t.dateStr)){
+        lossData.push({date:t.dateStr,tag5:t.tag5,type:t.eventType,barn:t.barn,note:t.method,c:null});
+      }
+    });
+    const treatCnt=TREAT_DATA.filter(t=>t.eventType==='treat').length;
+    const deathCnt=TREAT_DATA.filter(t=>t.eventType==='death').length;
+    const urgentCnt=TREAT_DATA.filter(t=>t.eventType==='urgent').length;
     bar.className='treat-bar loaded';
-    bar.innerHTML='<span>&#10003;</span><strong>治療履歴 '+TREAT_DATA.length.toLocaleString()+'件（'+file.name+'）</strong>';
+    bar.innerHTML='<span>&#10003;</span><strong>治療 '+treatCnt+'件 / 死亡 '+deathCnt+'件 / 緊急出荷 '+urgentCnt+'件（'+file.name+'）</strong>';
     renderTreatPage();
   }catch(e){
     bar.className='treat-bar';
@@ -1423,6 +1828,8 @@ function saveToStorage() {
   try {
     localStorage.setItem(LS_CATTLE, JSON.stringify(cattle));
     localStorage.setItem(LS_BARNS,  JSON.stringify(BARNS));
+    localStorage.setItem('hiyuku_feed_v1', JSON.stringify(feedData));
+    localStorage.setItem('hiyuku_loss_v1', JSON.stringify(lossData));
   } catch(e) {
     console.warn('保存エラー:', e);
   }
@@ -1432,12 +1839,10 @@ function loadFromStorage() {
   try {
     const savedCattle = localStorage.getItem(LS_CATTLE);
     const savedBarns  = localStorage.getItem(LS_BARNS);
-    if (savedCattle) {
-      cattle = JSON.parse(savedCattle);
-    }
-    if (savedBarns) {
-      BARNS = JSON.parse(savedBarns);
-    }
+    if (savedCattle) { cattle = JSON.parse(savedCattle); }
+    if (savedBarns)  { BARNS  = JSON.parse(savedBarns);  }
+    try { const sf=localStorage.getItem('hiyuku_feed_v1'); if(sf) feedData=JSON.parse(sf); } catch(e){}
+    try { const sl=localStorage.getItem('hiyuku_loss_v1'); if(sl) lossData=JSON.parse(sl); } catch(e){}
     return !!(savedCattle || savedBarns);
   } catch(e) {
     console.warn('復元エラー:', e);
@@ -1601,9 +2006,11 @@ function buildOpsRow(i) {
     <td class="acell ${ok}" id="ops-age-${i}">${c?c.age+'ヶ月':'—'}</td>
     <td class="acell ${ok}" id="ops-rank-${i}">${c?rankLabel[c.sickRank||0]:'—'}</td>
     <td>
-      <select class="cs" id="ops-op-${i}" onchange="opsRows[${i}].op=this.value;updateOpsRow(${i})" style="width:90px">
+      <select class="cs" id="ops-op-${i}" onchange="opsRows[${i}].op=this.value;updateOpsRow(${i})" style="width:100px">
         <option value="ship"${r.op==='ship'?' selected':''}>出荷</option>
         <option value="move"${r.op==='move'?' selected':''}>移動</option>
+        <option value="death"${r.op==='death'?' selected':''}>死亡</option>
+        <option value="urgent"${r.op==='urgent'?' selected':''}>緊急出荷</option>
       </select>
     </td>
     <td id="ops-dest-barn-cell-${i}"${r.op==='ship'?' style="opacity:.3;pointer-events:none"':''}>
@@ -1698,6 +2105,8 @@ function execOps() {
   const noDestMoves = moves.filter(r => !r.moveBarnId);
   if (noDestMoves.length) { alert('移動先の牛舎が選択されていない行があります。'); return; }
 
+  const deaths2 = targets.filter(r => r.op === 'death');
+  const urgents2 = targets.filter(r => r.op === 'urgent');
   const shipNames = ships.map(r => { const c=cattle[r.cattleKey]; return c?`#${String(c.fullId).slice(-5)} (${c.sex} ${c.age}ヶ月)`:r.tag5; });
   const moveNames = moves.map(r => {
     const c=cattle[r.cattleKey];
@@ -1721,6 +2130,32 @@ ${moveNames.join(', ')}`;
     if (!c) return;
     delete cattle[r.cattleKey];
     results.push(`<span style="color:#1a6b40">✓ 出荷</span>　#${String(c.fullId).slice(-5)} ${c.sex} ${c.age}ヶ月`);
+  });
+
+  // 死亡処理
+  const deaths = targets.filter(r => r.op === 'death');
+  deaths.forEach(r => {
+    const c = cattle[r.cattleKey];
+    if (!c) return;
+    const now2=new Date();
+    const ds2=now2.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
+    lossData.push({date:ds2,tag5:String(c.fullId).slice(-5),type:'death',
+      barnId:c.barnId,pen:c.pen,note:r.movePen||'',c:{...c}});
+    delete cattle[r.cattleKey];
+    results.push(`<span style="color:#791f1f">✓ 死亡登録</span>　#${String(c.fullId).slice(-5)} ${c.sex} ${c.age}ヶ月`);
+  });
+
+  // 緊急出荷処理
+  const urgents = targets.filter(r => r.op === 'urgent');
+  urgents.forEach(r => {
+    const c = cattle[r.cattleKey];
+    if (!c) return;
+    const now2=new Date();
+    const ds2=now2.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
+    lossData.push({date:ds2,tag5:String(c.fullId).slice(-5),type:'urgent',
+      barnId:c.barnId,pen:c.pen,note:r.movePen||'',c:{...c}});
+    delete cattle[r.cattleKey];
+    results.push(`<span style="color:#7a5c00">✓ 緊急出荷登録</span>　#${String(c.fullId).slice(-5)} ${c.sex} ${c.age}ヶ月`);
   });
 
   // 移動処理
@@ -1786,6 +2221,778 @@ function clearOps() {
   const tb = document.getElementById('ops-body');
   if (tb) tb.innerHTML = '';
   addOpsRows(5);
+}
+
+
+// ━━━ マップ検索 ━━━
+function searchMap(val){
+  const tag = val.trim();
+  // 全セルのハイライトをリセット
+  document.querySelectorAll('.cc.search-hit').forEach(el=>{
+    el.classList.remove('search-hit');
+    el.style.outline='';
+    el.style.zIndex='';
+  });
+  if(!tag || tag.length < 2){
+    document.getElementById('map-search-result').textContent='';
+    return;
+  }
+  // マップ上で該当個体を探す
+  let found = [];
+  Object.entries(cattle).forEach(([k,c])=>{
+    if(!c) return;
+    const id5 = String(c.fullId).slice(-5);
+    if(id5.includes(tag) || id5 === tag.padStart(5,'0')){
+      found.push({key:k, c});
+    }
+  });
+  const resEl = document.getElementById('map-search-result');
+  if(!found.length){
+    resEl.textContent = '見つかりません';
+    resEl.style.color = '#c00';
+    return;
+  }
+  resEl.style.color = '#1a6b40';
+  resEl.textContent = found.length + '頭見つかりました';
+  // 該当セルをハイライト
+  found.forEach(({key, c})=>{
+    const cellId = 'cell-' + key.replace(/:/g,'-');
+    const el = document.getElementById(cellId);
+    if(el){
+      el.classList.add('search-hit');
+      el.style.outline = '3px solid #FFD700';
+      el.style.zIndex = '10';
+      // 最初の1頭はスクロール
+      if(found.indexOf(found.find(f=>f.key===key))===0){
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    }
+  });
+  // 1頭だけなら詳細パネルを開く
+  if(found.length === 1){
+    const [barnId, pen, idx] = found[0].key.split(':');
+    clickCell(barnId, parseInt(pen), parseInt(idx));
+  }
+}
+
+
+// ━━━ 餌食い管理 ━━━
+let _feedBarnId=null, _feedPen=null;
+
+function openFeedModal(barnId, pen){
+  _feedBarnId=barnId; _feedPen=pen;
+  const b=BARNS.find(x=>x.id===barnId)||{name:barnId};
+  document.getElementById('feed-modal-title').textContent=b.name+' '+pen+'部屋　餌食い記録';
+  // この部屋の在舎牛
+  const pCattle=[];
+  for(let idx=0;idx<(b.penCap||6);idx++){
+    const c=cattle[barnId+':'+pen+':'+idx];
+    if(c) pCattle.push(c);
+  }
+  document.getElementById('feed-modal-sub').textContent=
+    '在舎: '+pCattle.length+'頭　'+pCattle.map(c=>String(c.fullId).slice(-5)).join(', ');
+  document.getElementById('feed-note-input').value='';
+  renderFeedHist(barnId+':'+pen);
+  document.getElementById('feed-mbg').style.display='flex';
+}
+
+function renderFeedHist(key){
+  const hist=(feedData[key]||[]).slice().reverse();
+  const el=document.getElementById('feed-hist-list');
+  if(!hist.length){el.innerHTML='<div style="color:#aaa;font-size:12px">記録なし</div>';return;}
+  el.innerHTML=hist.map(h=>{
+    const grade=h.grade;
+    const cls='pfb-'+grade.toLowerCase();
+    return`<div class="fhi">
+      <span class="fd">${h.date}</span>
+      <span class="pen-feed-badge ${cls}">${grade}</span>
+      <span>${h.note||''}</span>
+    </div>`;
+  }).join('');
+}
+
+function recordFeed(grade){
+  if(!_feedBarnId||!_feedPen) return;
+  const key=_feedBarnId+':'+_feedPen;
+  if(!feedData[key]) feedData[key]=[];
+  const note=document.getElementById('feed-note-input').value.trim();
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
+  // この部屋の牛の耳標スナップショット（移動追跡用）
+  const b=BARNS.find(x=>x.id===_feedBarnId)||{penCap:6};
+  const snap=[];
+  for(let idx=0;idx<(b.penCap||6);idx++){
+    const c=cattle[_feedBarnId+':'+_feedPen+':'+idx];
+    if(c) snap.push(String(c.fullId).slice(-5));
+  }
+  feedData[key].push({date:dateStr,grade,note,cattle:snap});
+  // 各牛の履歴にも記録
+  snap.forEach(tag5=>{
+    const entry=Object.entries(cattle).find(([k,c])=>c&&String(c.fullId).slice(-5)===tag5);
+    if(entry){
+      if(!entry[1].feedHist) entry[1].feedHist=[];
+      entry[1].feedHist.push({date:dateStr,grade,note,barn:_feedBarnId,pen:_feedPen});
+    }
+  });
+  saveToStorage();
+  renderFeedHist(key);
+  renderMap();
+  document.getElementById('feed-note-input').value='';
+}
+
+function clearFeedRecord(){
+  if(!_feedBarnId||!_feedPen) return;
+  if(!confirm('この部屋の餌食い記録を全て削除しますか？')) return;
+  const key=_feedBarnId+':'+_feedPen;
+  delete feedData[key];
+  saveToStorage();
+  renderFeedHist(key);
+  renderMap();
+}
+
+function closeFeedModal(e){
+  if(e&&e.target!==document.getElementById('feed-mbg')) return;
+  document.getElementById('feed-mbg').style.display='none';
+  _feedBarnId=null; _feedPen=null;
+}
+
+
+// ━━━ 牛群健康管理レポート ━━━
+
+// 治療カテゴリ判定
+function categorizeTreat(method){
+  const m = method || '';
+  if(/ルーメン|レバチオ|マルチリキッド|飲ませ|経口|ﾙｰﾒﾝ|ﾚﾊﾞﾁ|ﾏﾙﾁ/i.test(m)) return '経口薬';
+  if(/ﾌﾛﾙ|ｾﾌｧ|セファ|フロル|アンピ|ｱﾝﾋﾟ|肺炎/i.test(m)) return '肺炎系';
+  if(/P1[46]|K1[45]|腸|下痢|消化/i.test(m)) return '消化器系';
+  if(/Vit|ﾋﾞﾀ|ビタ/i.test(m)) return 'ビタミン';
+  if(/ｼﾞｸﾛ|ジクロ|解熱|鎮痛/i.test(m)) return '解熱・鎮痛';
+  if(/寝ころ|起立不能|ダウン/i.test(m)) return '起立不能';
+  if(/検温/i.test(m)) return '検温';
+  return 'その他';
+}
+
+// ステージ判定
+function ageStage(age){
+  if(age <= 12) return '〜12ヶ月';
+  if(age <= 22) return '13〜22ヶ月';
+  return '23ヶ月〜';
+}
+
+
+
+// ━━━ 牛群健康管理レポート（視覚化版）━━━
+
+function categorizeTreat(method){
+  const m=method||'';
+  if(/ルーメン|レバチオ|マルチリキッド|飲ませ|経口|ﾙｰﾒﾝ|ﾚﾊﾞﾁ|ﾏﾙﾁ/i.test(m)) return '経口薬';
+  if(/ﾌﾛﾙ|ｾﾌｧ|セファ|フロル|アンピ|ｱﾝﾋﾟ|肺炎/i.test(m)) return '肺炎系';
+  if(/P1[46]|K1[45]|腸|下痢|消化/i.test(m)) return '消化器系';
+  if(/Vit|ﾋﾞﾀ|ビタ/i.test(m)) return 'ビタミン';
+  if(/ｼﾞｸﾛ|ジクロ|解熱|鎮痛/i.test(m)) return '解熱・鎮痛';
+  if(/寝ころ|起立不能|ダウン/i.test(m)) return '起立不能';
+  if(/検温/i.test(m)) return '検温';
+  return 'その他';
+}
+
+function ageStageK(age){
+  if(age<=6)  return '〜6ヶ月';
+  if(age<=12) return '7〜12ヶ月';
+  if(age<=18) return '13〜18ヶ月';
+  if(age<=24) return '19〜24ヶ月';
+  return '25ヶ月〜';
+}
+function ageStageKeisan(mo){
+  if(mo<=1)  return '導入〜1ヶ月';
+  if(mo<=2)  return '2ヶ月';
+  if(mo<=3)  return '3ヶ月';
+  if(mo<=6)  return '4〜6ヶ月';
+  if(mo<=9)  return '7〜9ヶ月';
+  return '10ヶ月〜';
+}
+
+function mkBar(pct, color){
+  return `<div style="background:#f0efe8;border-radius:4px;height:10px;width:100%;overflow:hidden;margin-top:3px">
+    <div style="background:${color};height:100%;width:${Math.min(100,pct)}%;border-radius:4px;transition:width .3s"></div>
+  </div>`;
+}
+
+function buildReport(){
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('rpt-date').textContent='生成日時: '+dateStr;
+
+  // 期間フィルター
+  const {fromDate, toDate, from:fromVal, to:toVal} = getRptDateRange();
+  const periodLabel = fromVal||toVal
+    ? (fromVal?fromVal.replace('-','年')+'月':'') + ' 〜 ' + (toVal?toVal.replace('-','年')+'月':'')
+    : '全期間';
+  document.getElementById('rpt-period-label').textContent = '表示中: '+periodLabel;
+
+  // 期間でフィルタ
+  const inRange = t => {
+    if(!t.date) return true;
+    if(fromDate && t.date < fromDate) return false;
+    if(toDate   && t.date > toDate)   return false;
+    return true;
+  };
+  const inRangeLoss = l => {
+    if(!l.date) return true;
+    const ld = l.date instanceof Date ? l.date : new Date(String(l.dateStr||'').replace(/\//g,'-'));
+    if(isNaN(ld)) return true;
+    if(fromDate && ld < fromDate) return false;
+    if(toDate   && ld > toDate)   return false;
+    return true;
+  };
+
+  // 農場フィルター描画（UIのみ）
+  renderRptBarnFilter();
+  const activeCattle = Object.values(cattle).filter(c=>c);
+  const total=activeCattle.length;
+
+  // 治療データ（期間フィルター適用）
+  const treatOnly=TREAT_DATA.filter(t=>(!t.eventType||t.eventType==='treat')&&inRange(t));
+  // 農場フィルター適用（死亡・緊急）
+  const farmFiltered = rptSelectedFarms !== null;
+  const inFarm = l => !farmFiltered || rptSelectedFarms.size===0 || rptSelectedFarms.has(extractFarmName(l.sheet));
+  const deathList=lossLedgerData.filter(l=>l.type==='death'&&inRangeLoss(l)&&inFarm(l));
+  const urgentList=lossLedgerData.filter(l=>l.type==='urgent'&&inRangeLoss(l)&&inFarm(l));
+
+  if(!total&&!TREAT_DATA.length&&!lossLedgerData.length){
+    document.getElementById('rpt-content').innerHTML=
+      '<div style="color:#aaa;text-align:center;padding:40px">肥育台帳と健康管理台帳を読み込んでからレポートを表示します</div>';
+    return;
+  }
+
+  let html='';
+
+  // ══════ セクション1: トップサマリー ══════
+  const sickCnt=activeCattle.filter(c=>c.sickRank>0).length;
+  const feedBCpens=Object.entries(feedData).filter(([k,h])=>h&&h.length&&(h[h.length-1].grade==='B'||h[h.length-1].grade==='C'));
+  const feedCpens=feedBCpens.filter(([k,h])=>h[h.length-1].grade==='C');
+  const treatSet=new Set(treatOnly.map(t=>t.tag5));
+  const notInMap=[...treatSet].filter(tag5=>!activeCattle.find(c=>String(c.fullId).slice(-5)===tag5));
+
+  html+=`<div class="rpt-section">
+    <h3>📊 現在の牛群サマリー</h3>
+    <div class="rpt-grid">
+      <div class="rpt-card"><div class="rl">在舎頭数</div><div class="rv">${total}<span style="font-size:13px;font-weight:400">頭</span></div></div>
+      <div class="rpt-card"><div class="rl">病畜・要観察</div><div class="rv" style="color:${sickCnt?'#c00':'#1a6b40'}">${sickCnt}<span style="font-size:13px;font-weight:400">頭</span></div><div class="rs">ランク1以上</div></div>
+      <div class="rpt-card"><div class="rl">餌食いB/C部屋</div><div class="rv" style="color:${feedBCpens.length?'#c00':'#1a6b40'}">${feedBCpens.length}<span style="font-size:13px;font-weight:400">部屋</span></div><div class="rs">うちC: ${feedCpens.length}部屋</div></div>
+      <div class="rpt-card"><div class="rl">死亡（台帳）</div><div class="rv" style="color:${deathList.length?'#791f1f':'#1a6b40'}">${deathList.length}<span style="font-size:13px;font-weight:400">頭</span></div></div>
+      <div class="rpt-card"><div class="rl">緊急出荷（台帳）</div><div class="rv" style="color:${urgentList.length?'#7a5c00':'#1a6b40'}">${urgentList.length}<span style="font-size:13px;font-weight:400">頭</span></div></div>
+      <div class="rpt-card"><div class="rl">治療件数合計</div><div class="rv">${treatOnly.length}<span style="font-size:13px;font-weight:400">件</span></div></div>
+    </div>
+  </div>`;
+
+  // ══════ セクション2: 要注意アラート ══════
+  let alertHtml='';
+  if(notInMap.length){
+    alertHtml+=`<div class="rpt-alert">⚠️ <strong>マップに登録されていない治療牛 ${notInMap.length}頭</strong>
+      <div style="font-size:12px;color:#666;margin-top:3px">耳標: ${notInMap.join(', ')}</div></div>`;
+  }
+  feedCpens.forEach(([key,hist])=>{
+    const [barnId,pen]=key.split(':');
+    const b=BARNS.find(x=>x.id===barnId)||{name:barnId};
+    const lastC=hist.filter(h=>h.grade==='C').pop();
+    if(!lastC) return;
+    const daysSince=Math.floor((now-new Date(lastC.date.replace(/\//g,'-')))/(864e5));
+    const tags=[];
+    for(let idx=0;idx<(b.penCap||6);idx++){const c=cattle[barnId+':'+pen+':'+idx];if(c)tags.push(String(c.fullId).slice(-5));}
+    const recentTreat=treatOnly.filter(t=>{return tags.includes(t.tag5)&&(now-t.date)/(864e5)<=7;});
+    const hasOral=recentTreat.some(t=>categorizeTreat(t.method)==='経口薬');
+    if(!recentTreat.length){
+      alertHtml+=`<div class="rpt-alert">🌾 <strong>餌食いC継続 ${daysSince}日: ${b.name} ${pen}部屋</strong> <span class="badge-red">治療記録なし</span>
+        <div style="font-size:12px;color:#666;margin-top:3px">在舎: ${tags.join(', ')||'なし'}</div></div>`;
+    } else if(!hasOral){
+      alertHtml+=`<div class="rpt-alert warn">🌾 <strong>餌食いC継続 ${daysSince}日: ${b.name} ${pen}部屋</strong> <span class="badge-orange">経口薬なし</span>
+        <div style="font-size:12px;color:#666;margin-top:3px">在舎: ${tags.join(', ')||'なし'}</div></div>`;
+    }
+  });
+  const keisan2m=activeCattle.filter(c=>c.sex==='経産'&&introMonths(c)<=2);
+  if(keisan2m.length){
+    alertHtml+=`<div class="rpt-alert warn">🐄 <strong>経産 導入後2ヶ月以内: ${keisan2m.length}頭</strong>（要注意期間）
+      <div style="font-size:12px;color:#666;margin-top:3px">${keisan2m.map(c=>{const b=BARNS.find(x=>x.id===c.barnId)||{name:c.barnId};return String(c.fullId).slice(-5)+'('+b.name+c.pen+'部屋)';}).join(', ')}</div></div>`;
+  }
+  if(!alertHtml) alertHtml='<div class="rpt-alert ok">✓ 現時点で特記すべきアラートはありません</div>';
+  html+=`<div class="rpt-section"><h3>🚨 要注意アラート</h3>${alertHtml}</div>`;
+
+  // ══════ セクション3: 品種別詳細分析 ══════
+  const breedDefs=[
+    {key:'KM', label:'黒毛和種（去勢・未経産）', filter:c=>c.sex!=='経産'&&(c.breed||'K')==='K', keisan:false},
+    {key:'F1', label:'F1（交雑種）',              filter:c=>(c.breed||'K')==='F1',                 keisan:false},
+    {key:'KEI',label:'黒毛和種（経産）',           filter:c=>c.sex==='経産',                        keisan:true},
+  ];
+
+  breedDefs.forEach(grp=>{
+    const grpCattle=activeCattle.filter(grp.filter);
+    if(!grpCattle.length&&!lossData.filter(l=>{
+      // ロスデータの品種判定は簡易で
+      return l.c?grp.filter(l.c):false;
+    }).length) return;
+
+    const selfBorn=grpCattle.filter(c=>(c.origin||'導入')==='自家産').length;
+    const imported=grpCattle.length-selfBorn;
+    const grpTags=new Set(grpCattle.map(c=>String(c.fullId).slice(-5)));
+    const grpTreats=treatOnly.filter(t=>grpTags.has(t.tag5));
+    const treatedSet=new Set(grpTreats.map(t=>t.tag5));
+
+    // ランクC・B率
+    const rankC=grpCattle.filter(c=>c.sickRank===3).length;
+    const rankB=grpCattle.filter(c=>c.sickRank===2).length;
+    const rankA1=grpCattle.filter(c=>c.sickRank===1).length;
+
+    // 死亡・緊急（このグループ）
+    const normSexL=s=>s==='去'||s==='去勢'?'去勢':s==='未'||s==='未経産'||s==='雌'?'未経産':s==='経'||s==='経産'?'経産':s;
+    const grpDeath=lossLedgerData.filter(l=>l.type==='death'&&inRangeLoss(l)&&grp.filter({sex:normSexL(l.sex),breed:l.breed,origin:l.origin}));
+    const grpUrgent=lossLedgerData.filter(l=>l.type==='urgent'&&inRangeLoss(l)&&grp.filter({sex:normSexL(l.sex),breed:l.breed,origin:l.origin}));
+
+    // 治療カテゴリ集計
+    const catCount={};
+    grpTreats.forEach(t=>{const cat=categorizeTreat(t.method);catCount[cat]=(catCount[cat]||0)+1;});
+    const catSorted=Object.entries(catCount).sort((a,b)=>b[1]-a[1]);
+
+    // ステージ別集計
+    const stageFn=grp.keisan?
+      (c)=>ageStageKeisan(introMonths(c)):
+      (c)=>ageStageK(c.age||0);
+    const stageOrder=grp.keisan?
+      ['導入〜1ヶ月','2ヶ月','3ヶ月','4〜6ヶ月','7〜9ヶ月','10ヶ月〜']:
+      ['〜6ヶ月','7〜12ヶ月','13〜18ヶ月','19〜24ヶ月','25ヶ月〜'];
+
+    const stageMap={};
+    grpCattle.forEach(c=>{const s=stageFn(c);if(!stageMap[s])stageMap[s]={cattle:[],treats:[]};stageMap[s].cattle.push(c);});
+    grpTreats.forEach(t=>{
+      const entry=grpCattle.find(c=>String(c.fullId).slice(-5)===t.tag5);
+      if(!entry) return;
+      const s=stageFn(entry);
+      if(stageMap[s]) stageMap[s].treats.push(t);
+    });
+
+    // ステージ別死亡・緊急
+    const stageLoss={};
+    lossLedgerData.filter(l=>inRangeLoss(l)&&grp.filter({sex:normSexL(l.sex),breed:l.breed,origin:l.origin})).forEach(l=>{
+      const s=grp.keisan?ageStageKeisan(l.introMonths||0):ageStageK(l.age||0);
+      if(!stageLoss[s]) stageLoss[s]={death:0,urgent:0,deathSelf:0,deathImport:0,urgentSelf:0,urgentImport:0};
+      const isSelf=(l.origin||'導入')==='自家産';
+      if(l.type==='death'){
+        stageLoss[s].death++;
+        if(isSelf) stageLoss[s].deathSelf++; else stageLoss[s].deathImport++;
+      } else {
+        stageLoss[s].urgent++;
+        if(isSelf) stageLoss[s].urgentSelf++; else stageLoss[s].urgentImport++;
+      }
+    });
+
+    // ステージ行
+    let stageRows='';
+    stageOrder.forEach(s=>{
+      const sd=stageMap[s];
+      const sl=stageLoss[s]||{death:0,urgent:0};
+      if(!sd&&!sl.death&&!sl.urgent) return;
+      const headCnt=sd?sd.cattle.length:0;
+      const treatCnt=sd?new Set(sd.treats.map(t=>t.tag5)).size:0;
+      const treatTotal=sd?sd.treats.length:0;
+      const rate=headCnt?Math.round(treatCnt/headCnt*100):0;
+      const deathDetail=sl.death?'死亡 '+sl.death+'頭'+(sl.deathSelf||sl.deathImport?' (自'+sl.deathSelf+'/導'+sl.deathImport+')':''):'';
+      const urgDetail=sl.urgent?'緊急 '+sl.urgent+'頭'+(sl.urgentSelf||sl.urgentImport?' (自'+sl.urgentSelf+'/導'+sl.urgentImport+')':''):'';
+      const deathBadge=sl.death?'<span class="badge-red">'+deathDetail+'</span> ':'';
+      const urgBadge=sl.urgent?'<span class="badge-orange">'+urgDetail+'</span>':'';
+      stageRows+=`<tr>
+        <td style="font-weight:500">${s}</td>
+        <td style="text-align:center">${headCnt}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:13px;font-weight:600;color:${rate>=50?'#c00':rate>=25?'#7a5c00':'#1a1a1a'}">${rate}%</span>
+            <span style="font-size:11px;color:#888">(${treatCnt}頭/${treatTotal}件)</span>
+          </div>
+          ${mkBar(rate, rate>=50?'#E24B4A':rate>=25?'#EF9F27':'#1D9E75')}
+        </td>
+        <td>${deathBadge}${urgBadge||'—'}</td>
+      </tr>`;
+    });
+
+    // 治療内容ビジュアル
+    const totalTreats=grpTreats.length||1;
+    const catBars=catSorted.slice(0,6).map(([cat,cnt])=>{
+      const pct=Math.round(cnt/totalTreats*100);
+      const color={'経口薬':'#8E44AD','肺炎系':'#E24B4A','消化器系':'#2980B9','ビタミン':'#27AE60','解熱・鎮痛':'#EF9F27','検温':'#95A5A6','起立不能':'#7D3C98','その他':'#BDC3C7'}[cat]||'#BDC3C7';
+      return `<div style="margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+          <span>${cat}</span><span style="color:#666">${cnt}件 (${pct}%)</span>
+        </div>
+        ${mkBar(pct,color)}
+      </div>`;
+    }).join('');
+
+    html+=`<div class="rpt-section">
+      <h3>${grp.label}
+        <span class="badge-gray" style="margin-left:6px">${grpCattle.length}頭</span>
+        <span class="badge-green" style="margin-left:4px">自家産 ${selfBorn}</span>
+        <span class="badge-gray" style="margin-left:4px">導入 ${imported}</span>
+        ${grpDeath.length?`<span class="badge-red" style="margin-left:4px">死亡 ${grpDeath.length}</span>`:''}
+        ${grpUrgent.length?`<span class="badge-orange" style="margin-left:4px">緊急 ${grpUrgent.length}</span>`:''}
+      </h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">📊 ${grp.keisan?'導入後月数':'月齢'}別 治療割合</div>
+          <table class="rpt-table">
+            <thead><tr>
+              <th>${grp.keisan?'導入後':'月齢'}</th><th>頭数</th><th>治療割合</th><th>死亡/緊急</th>
+            </tr></thead>
+            <tbody>${stageRows||'<tr><td colspan="4" style="color:#aaa;text-align:center">データなし</td></tr>'}</tbody>
+          </table>
+          <div style="font-size:11px;color:#888;margin-top:6px">
+            ランク重篤(C): ${rankC}頭 　病畜(B): ${rankB}頭 　要観察(A): ${rankA1}頭
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">💉 主な治療内容（${grpTreats.length}件）</div>
+          ${catBars||'<div style="color:#aaa;font-size:12px">治療データなし</div>'}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // ══════ セクション4: 死亡・緊急出荷（全農場・台帳ベース）══════
+  const allLoss = [...deathList, ...urgentList]; // 期間フィルター済み
+  if(allLoss.length){
+    // 牛舎（シート）別集計
+    const lossBySheet={};
+    allLoss.forEach(l=>{
+      if(!lossBySheet[l.sheet]) lossBySheet[l.sheet]={death:0,urgent:0,selfBorn:0,imported:0,breeds:{}};
+      const d=lossBySheet[l.sheet];
+      if(l.type==='death') d.death++;
+      else d.urgent++;
+      if(l.origin==='自家産') d.selfBorn++;
+      else d.imported++;
+      d.breeds[l.breed]=(d.breeds[l.breed]||0)+1;
+    });
+
+    // 本社のマップ登録牛で死亡・緊急のものを部屋特定
+    const honshaDeath=allLoss.filter(l=>l.sheet.includes('本社')&&l.type==='death');
+    const honshaUrgent=allLoss.filter(l=>l.sheet.includes('本社')&&l.type==='urgent');
+    const mapDeathPens={};
+    [...honshaDeath,...honshaUrgent].forEach(l=>{
+      // マップ上で同じ耳標の牛を探す（元いた部屋）
+      const found=Object.entries(cattle).find(([k,c])=>c&&String(c.fullId).slice(-5)===l.tag5);
+      if(found){
+        const c=found[1];
+        const b=BARNS.find(x=>x.id===c.barnId)||{name:c.barnId};
+        const key=b.name+' '+c.pen+'部屋';
+        if(!mapDeathPens[key]) mapDeathPens[key]={death:0,urgent:0};
+        if(l.type==='death') mapDeathPens[key].death++;
+        else mapDeathPens[key].urgent++;
+      }
+    });
+
+    // 全農場テーブル
+    let sheetRows='';
+    Object.entries(lossBySheet)
+      .sort((a,b)=>(b[1].death+b[1].urgent)-(a[1].death+a[1].urgent))
+      .forEach(([sheet,d])=>{
+        const breedStr=Object.entries(d.breeds).map(([k,v])=>{
+          const lbl=k==='F1'?'F1':k==='KEI'?'経産':'黒毛';
+          return lbl+'('+v+')';
+        }).join(', ');
+        sheetRows+=`<tr>
+          <td style="font-weight:500">${sheet}</td>
+          <td style="text-align:center">${d.death?'<span class="badge-red">'+d.death+'</span>':'—'}</td>
+          <td style="text-align:center">${d.urgent?'<span class="badge-orange">'+d.urgent+'</span>':'—'}</td>
+          <td><span class="badge-green">自家産${d.selfBorn}</span> <span class="badge-gray">導入${d.imported}</span></td>
+          <td style="font-size:11px;color:#666">${breedStr}</td>
+        </tr>`;
+      });
+
+    // 本社マップ登録牛の発生部屋
+    let penRows='';
+    Object.entries(mapDeathPens).sort((a,b)=>(b[1].death+b[1].urgent)-(a[1].death+a[1].urgent)).forEach(([pen,d])=>{
+      penRows+=`<tr>
+        <td style="font-weight:500">${pen}</td>
+        <td style="text-align:center">${d.death?'<span class="badge-red">死亡 '+d.death+'</span>':'—'}</td>
+        <td style="text-align:center">${d.urgent?'<span class="badge-orange">緊急 '+d.urgent+'</span>':'—'}</td>
+      </tr>`;
+    });
+
+    html+=`<div class="rpt-section">
+      <h3>💀 死亡・緊急と畜（台帳ベース・全農場）</h3>
+      <div style="font-size:12px;color:#888;margin-bottom:8px">
+        合計: 死亡 ${allLoss.filter(l=>l.type==='death').length}頭 / 緊急と畜 ${allLoss.filter(l=>l.type==='urgent').length}頭
+      </div>
+      <table class="rpt-table">
+        <thead><tr><th>牛舎（シート名）</th><th>死亡</th><th>緊急と畜</th><th>自家産/導入</th><th>品種内訳</th></tr></thead>
+        <tbody>${sheetRows}</tbody>
+      </table>
+      ${penRows?`<div style="font-size:12px;font-weight:600;color:#555;margin:12px 0 6px">本社マップ登録牛の発生部屋</div>
+      <table class="rpt-table">
+        <thead><tr><th>部屋</th><th>死亡</th><th>緊急と畜</th></tr></thead>
+        <tbody>${penRows}</tbody>
+      </table>`:''}
+    </div>`;
+  }
+
+  // ══════ セクション5: 餌食い要注意部屋 ══════
+  if(feedBCpens.length){
+    let feedRows='';
+    feedBCpens.sort((a,b)=>{const ga=a[1][a[1].length-1].grade,gb=b[1][b[1].length-1].grade;return (ga==='C'?0:1)-(gb==='C'?0:1);})
+    .forEach(([key,hist])=>{
+      const [barnId,pen]=key.split(':');
+      const b=BARNS.find(x=>x.id===barnId)||{name:barnId};
+      const last=hist[hist.length-1];
+      const tags=[];
+      for(let idx=0;idx<(b.penCap||6);idx++){const c=cattle[barnId+':'+pen+':'+idx];if(c)tags.push(String(c.fullId).slice(-5));}
+      const cls=last.grade==='C'?'badge-red':'badge-orange';
+      const recentTreats=treatOnly.filter(t=>tags.includes(t.tag5)&&(now-t.date)/(864e5)<=7);
+      feedRows+=`<tr>
+        <td style="font-weight:500">${b.name} ${pen}部屋</td>
+        <td style="text-align:center"><span class="${cls}">${last.grade}</span></td>
+        <td>${last.date}</td>
+        <td>${last.note||'—'}</td>
+        <td style="text-align:center">${recentTreats.length?recentTreats.length+'件':'<span class="badge-red">なし</span>'}</td>
+        <td style="font-size:11px;color:#666">${tags.join(', ')||'なし'}</td>
+      </tr>`;
+    });
+    html+=`<div class="rpt-section">
+      <h3>🌾 餌食い要注意部屋</h3>
+      <table class="rpt-table">
+        <thead><tr><th>部屋</th><th>判定</th><th>記録日</th><th>メモ</th><th>直近7日治療</th><th>在舎耳標</th></tr></thead>
+        <tbody>${feedRows}</tbody>
+      </table>
+    </div>`;
+  }
+
+  document.getElementById('rpt-content').innerHTML=html;
+
+  // ── グラフ生成 ──
+  // 月リスト作成（TREATデータの日付範囲から）
+  const allDates = [
+    ...TREAT_DATA.filter(t=>t.date).map(t=>getMonthKey(t.date)),
+    ...lossLedgerData.filter(l=>l.date||l.dateStr).map(l=>getMonthKey(l.date||l.dateStr))
+  ].filter(m=>m);
+  let months = [...new Set(allDates)].sort();
+  if(fromDate||toDate){
+    months = months.filter(m=>{
+      const md = new Date(m+'-01');
+      if(fromDate && md < fromDate) return false;
+      if(toDate   && md > toDate)   return false;
+      return true;
+    });
+  }
+  if(months.length > 0){
+    setTimeout(()=>buildCharts(treatOnly, allLoss, months), 50);
+  } else {
+    document.getElementById('rpt-charts').style.display='none';
+  }
+}
+
+
+// ━━━ グラフ管理 ━━━
+let _chartTreat = null;
+let _chartLoss  = null;
+
+function clearRptFilter(){
+  document.getElementById('rpt-from').value = '';
+  document.getElementById('rpt-to').value   = '';
+  buildReport();
+}
+
+function getRptDateRange(){
+  const from = document.getElementById('rpt-from').value; // "2026-01"
+  const to   = document.getElementById('rpt-to').value;
+  return {
+    fromDate: from ? new Date(from + '-01') : null,
+    toDate:   to   ? new Date(to   + '-01T23:59:59') : null,
+    from, to
+  };
+}
+
+function getMonthKey(date){
+  if(!date) return '';
+  const d = date instanceof Date ? date : new Date(String(date).replace(/\//g,'-'));
+  if(isNaN(d)) return '';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function buildCharts(treatData, lossData, months){
+  const chartsDiv = document.getElementById('rpt-charts');
+  chartsDiv.style.display = 'block';
+
+  // ── 月別治療件数（品種別） ──
+  const kmByMonth={}, f1ByMonth={}, keiByMonth={};
+  months.forEach(m=>{ kmByMonth[m]=0; f1ByMonth[m]=0; keiByMonth[m]=0; });
+
+  treatData.forEach(t=>{
+    const m = getMonthKey(t.date);
+    if(!months.includes(m)) return;
+    // マップから品種を引く
+    const entry = Object.values(cattle).find(c=>c&&String(c.fullId).slice(-5)===t.tag5);
+    const breed = entry ? (entry.breed||'K') : 'K';
+    const sex   = entry ? entry.sex : '';
+    if(breed==='F1')      f1ByMonth[m]=(f1ByMonth[m]||0)+1;
+    else if(sex==='経産') keiByMonth[m]=(keiByMonth[m]||0)+1;
+    else                  kmByMonth[m]=(kmByMonth[m]||0)+1;
+  });
+
+  const labels = months.map(m=>{
+    const [y,mo]=m.split('-');
+    return y+'/'+(parseInt(mo))+'月';
+  });
+
+  // 折れ線グラフ（治療件数）
+  if(_chartTreat) _chartTreat.destroy();
+  const ctxT = document.getElementById('chart-treat').getContext('2d');
+  _chartTreat = new Chart(ctxT, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {label:'黒毛和種', data:months.map(m=>kmByMonth[m]||0),
+          borderColor:'#1D9E75', backgroundColor:'#1D9E7533', tension:0.3, fill:true, pointRadius:3},
+        {label:'F1', data:months.map(m=>f1ByMonth[m]||0),
+          borderColor:'#888', backgroundColor:'#88888822', tension:0.3, fill:true, pointRadius:3},
+        {label:'黒毛経産', data:months.map(m=>keiByMonth[m]||0),
+          borderColor:'#8E44AD', backgroundColor:'#8E44AD22', tension:0.3, fill:true, pointRadius:3},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{position:'bottom', labels:{font:{size:11}, boxWidth:12}}},
+      scales:{
+        y:{beginAtZero:true, ticks:{font:{size:11}}, title:{display:true, text:'件数', font:{size:11}}},
+        x:{ticks:{font:{size:10}, maxRotation:45}}
+      }
+    }
+  });
+
+  // ── 月別死亡・緊急件数（品種別積み上げ棒・2本）──
+  const breedSeries = [
+    {key:'K_自家産',   label:'黒毛(自家産)', color:'#1a6b40'},
+    {key:'K_導入',     label:'黒毛(導入)',   color:'#7BC8A4'},
+    {key:'F1_導入',    label:'F1(導入)',     color:'#BDBDBD'},
+    {key:'KEI_自家産', label:'経産(自家産)', color:'#5B2C6F'},
+    {key:'KEI_導入',   label:'経産(導入)',   color:'#C39BD3'},
+  ];
+
+  const deathSeries={}, urgentSeries={};
+  breedSeries.forEach(s=>{
+    deathSeries[s.key]={};  months.forEach(m=>deathSeries[s.key][m]=0);
+    urgentSeries[s.key]={}; months.forEach(m=>urgentSeries[s.key][m]=0);
+  });
+
+  const normSexForLoss = s => {
+    if(!s) return 'K';
+    if(s==='去'||s==='去勢'||s==='未'||s==='雌'||s==='未経産') return 'K';
+    if(s==='経'||s==='経産') return 'KEI';
+    return 'K';
+  };
+
+  lossData.forEach(l=>{
+    if(!l.date&&!l.dateStr) return;
+    const m = getMonthKey(l.date||l.dateStr);
+    if(!m||!months.includes(m)) return;
+    const breed  = l.breed||'K';
+    const origin = l.origin||'導入';
+    let skey;
+    if(breed==='F1')          skey='F1_導入';
+    else if(breed==='KEI')    skey='KEI_'+(origin==='自家産'?'自家産':'導入');
+    else                      skey='K_'+(origin==='自家産'?'自家産':'導入');
+    if(l.type==='death')  { if(deathSeries[skey])  deathSeries[skey][m]++;  }
+    else                  { if(urgentSeries[skey]) urgentSeries[skey][m]++; }
+  });
+
+  const makeBarDatasets = (seriesObj) => breedSeries.map(s=>({
+    label: s.label,
+    data: months.map(m=>seriesObj[s.key][m]||0),
+    backgroundColor: s.color+'CC',
+    borderColor: s.color,
+    borderWidth: 1,
+    stack: 'total'
+  }));
+
+  const barOptions = {
+    responsive:true, maintainAspectRatio:true,
+    plugins:{
+      legend:{position:'bottom', labels:{font:{size:10}, boxWidth:10}},
+      tooltip:{callbacks:{footer:items=>{
+        const t=items.filter(i=>i.dataset.stack==='total').reduce((s,i)=>s+i.raw,0);
+        return t?'合計: '+t+'頭':'';
+      }}}
+    },
+    scales:{
+      x:{stacked:true, ticks:{font:{size:10}, maxRotation:45}},
+      y:{stacked:true, beginAtZero:true, ticks:{font:{size:11}},
+         title:{display:true, text:'頭数', font:{size:11}}}
+    }
+  };
+
+  if(_chartLoss) _chartLoss.destroy();
+  const ctxD = document.getElementById('chart-death');
+  if(ctxD){ _chartLoss = new Chart(ctxD.getContext('2d'), {type:'bar', data:{labels, datasets:makeBarDatasets(deathSeries)}, options:barOptions}); }
+
+  if(typeof _chartUrgent !== 'undefined' && _chartUrgent) _chartUrgent.destroy();
+  const ctxU = document.getElementById('chart-urgent');
+  if(ctxU){ window._chartUrgent = new Chart(ctxU.getContext('2d'), {type:'bar', data:{labels, datasets:makeBarDatasets(urgentSeries)}, options:barOptions}); }
+}
+
+
+// ━━━ レポート農場フィルター ━━━
+let rptSelectedFarms = null; // null=未初期化（初回は全選択）、Set=選択済み
+
+function extractFarmName(sheet){
+  const m = sheet.match(/[-－](.+)$/);
+  return m ? m[1] : sheet;
+}
+
+function getFarmList(){
+  const farms = new Map();
+  lossLedgerData.forEach(l=>{
+    const farm = extractFarmName(l.sheet);
+    if(!farms.has(farm)) farms.set(farm, new Set());
+    farms.get(farm).add(l.sheet);
+  });
+  return farms;
+}
+
+function renderRptBarnFilter(){
+  const div = document.getElementById('rpt-barn-filter');
+  if(!div) return;
+  const farms = getFarmList();
+  if(!farms.size){
+    div.innerHTML='<span style="font-size:12px;color:#aaa">（台帳を読み込むと農場が表示されます）</span>';
+    return;
+  }
+  // 未初期化なら全選択
+  if(rptSelectedFarms===null){
+    rptSelectedFarms = new Set([...farms.keys()]);
+  }
+  div.innerHTML = [...farms.keys()].map(function(farm){
+    const sel = rptSelectedFarms!==null&&rptSelectedFarms.has(farm);
+    const bc = sel?'#1D9E75':'#ddd';
+    const bg = sel?'#e8f5ee':'#fff';
+    const fc = sel?'#085041':'#555';
+    return '<button onclick="toggleRptBarn(this.dataset.farm)" data-farm="'+farm+'" style="padding:3px 9px;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid '+bc+';background:'+bg+';color:'+fc+'">'+farm+'</button>';
+  }).join('');
+}
+
+function toggleRptBarn(farmOrEl){
+  const farm = typeof farmOrEl==='string' ? farmOrEl : farmOrEl;
+  if(rptSelectedFarms===null) rptSelectedFarms=new Set(getFarmList().keys());
+  if(rptSelectedFarms.has(farm)) rptSelectedFarms.delete(farm);
+  else rptSelectedFarms.add(farm);
+  renderRptBarnFilter();
+  buildReport();
+}
+
+function rptSelectAllBarns(){
+  rptSelectedFarms = new Set([...getFarmList().keys()]);
+  renderRptBarnFilter();
+  buildReport();
+}
+
+function rptClearBarns(){
+  rptSelectedFarms = new Set(); // 空のSet（nullではなくempty）
+  renderRptBarnFilter();
+  buildReport();
 }
 
 </script></body></html>
