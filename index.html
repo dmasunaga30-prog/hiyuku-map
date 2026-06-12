@@ -310,6 +310,7 @@ tbody tr:last-child td{border-bottom:none}
           <th class="ac" style="min-width:52px">⚡性別</th>
           <th class="ac" style="min-width:88px">⚡生年月日</th>
           <th class="ac" style="min-width:52px">⚡月齢</th>
+          <th style="min-width:90px">ランク</th>
         </tr></thead>
         <tbody id="ebody"></tbody>
       </table>
@@ -426,7 +427,22 @@ tbody tr:last-child td{border-bottom:none}
   </div>
 
 
-  <!-- 検索バー -->
+  <!-- 検索バー・複数選択 -->
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <button id="multi-select-btn" class="btn btn-sm" onclick="toggleMultiSelect()"
+      style="border-color:#EF9F27;color:#7a5c00">☑ 複数選択モード</button>
+    <div id="multi-select-bar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap">
+      <span id="multi-select-cnt" style="font-size:12px;color:#7a5c00;font-weight:500"></span>
+      <select id="multi-rank-sel" class="cs" style="width:100px;font-size:12px">
+        <option value="0">0-健康</option>
+        <option value="1">1-要観察</option>
+        <option value="2">2-病畜</option>
+        <option value="3">3-重篤</option>
+      </select>
+      <button class="btn btn-sm" onclick="applyMultiRank()" style="background:#EF9F27;color:#fff;border-color:#d4820a">一括変更</button>
+      <button class="btn btn-sm" onclick="clearMultiSelect()">選択解除</button>
+    </div>
+  </div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
     <input type="text" id="map-search-input" inputmode="numeric" maxlength="5"
       placeholder="🔍 下5桁で検索..."
@@ -1123,13 +1139,21 @@ function buildRow(i){
     <td class="acell ${ok}"    id="as-${i}">${lu?SEX_MAP[lu[2]]||lu[2]:'—'}</td>
     <td class="acell ${ok}"    id="ad-${i}">${lu?lu[3]:'—'}</td>
     <td class="acell ${ok}"    id="aa-${i}">${lu?lu[4]+'ヶ月':'—'}</td>
+    <td>
+      <select class="cs" id="rank-${i}" style="width:90px" onchange="rows[${i}].rank=parseInt(this.value)">
+        <option value="0">0-健康</option>
+        <option value="1">1-要観察</option>
+        <option value="2">2-病畜</option>
+        <option value="3">3-重篤</option>
+      </select>
+    </td>
   </tr>`;
 }
 function addRows(n){
   const tb=document.getElementById('ebody');
   for(let i=0;i<n;i++){
     const idx=rows.length;
-    rows.push({tag5:'',barnId:'',pen:'',lookup:null,status:'empty'});
+    rows.push({tag5:'',barnId:'',pen:'',lookup:null,status:'empty',rank:0});
     tb.insertAdjacentHTML('beforeend',buildRow(idx));
   }
   updateStats();
@@ -1247,7 +1271,7 @@ function doRegister(){
     const k=penKey(r.barnId,targetPen,targetIdx);
     cattle[k]={fullId:r.lookup[0],name:r.lookup[1]||'',sex:SEX_MAP[r.lookup[2]]||r.lookup[2],
       dob:r.lookup[3],age:r.lookup[4],breed:r.lookup[5]||'K',introDate:r.lookup[6]||'',origin:r.lookup[7]||'導入',
-      sickRank:0,treatCount:0,
+      sickRank:r.rank||0,treatCount:0,
       barnId:r.barnId,pen:targetPen,idx:targetIdx,shipped:false};
     ok++;
   });
@@ -1368,6 +1392,19 @@ function clickCell(barnId,pen,idx){
   const k=penKey(barnId,pen,idx);
   const c=cattle[k];
   if(!c)return;
+  // 複数選択モード
+  if(multiSelectMode){
+    const el=document.getElementById('cell-'+barnId+'-'+pen+'-'+idx);
+    if(selectedCells.has(k)){
+      selectedCells.delete(k);
+      if(el) el.style.outline='';
+    } else {
+      selectedCells.add(k);
+      if(el) el.style.outline='3px solid #EF9F27';
+    }
+    updateMultiSelectCount();
+    return;
+  }
   selKey=k;
   const b=BARNS.find(x=>x.id===barnId)||{name:barnId};
   const dp=document.getElementById('dpanel');
@@ -1698,6 +1735,37 @@ function exportExcel() {
     XLSX.utils.book_append_sheet(wb, wsFeed, '餌食いレポート');
   }
 
+  // ── シート: ランク別個体リスト（要観察以上）──
+  const rankData=[['ランク','牛舎','部屋','個体識別番号','名号','品種','性別','生年月日','月齢','治療回数','治療内容（直近3件）']];
+  const rankLabel2=['健康','要観察','病畜','重篤'];
+  Object.entries(cattle)
+    .filter(([k,c])=>c&&c.sickRank>0)
+    .sort(([,a],[,b])=>(b.sickRank||0)-(a.sickRank||0))
+    .forEach(([k,c])=>{
+      const [barnId,pen]=k.split(':');
+      const b=BARNS.find(x=>x.id===barnId)||{name:barnId};
+      const breedLbl=c.breed==='F1'?'F1（交雑種）':c.sex==='経産'?'黒毛和種（経産）':'黒毛和種';
+      const tag5=String(c.fullId).slice(-5);
+      const recentTreats=TREAT_DATA
+        .filter(t=>t.tag5===tag5&&(!t.eventType||t.eventType==='treat'))
+        .sort((a,b2)=>b2.date-a.date)
+        .slice(0,3)
+        .map(t=>t.dateStr+' '+t.method)
+        .join(' / ');
+      rankData.push([
+        rankLabel2[c.sickRank||0],
+        b.name, pen+'部屋',
+        c.fullId, c.name||'', breedLbl, c.sex,
+        c.dob, (c.age||0)+'ヶ月', c.treatCount||0,
+        recentTreats||'—'
+      ]);
+    });
+  if(rankData.length>1){
+    const wsRank=XLSX.utils.aoa_to_sheet(rankData);
+    wsRank['!cols']=[8,10,8,14,12,12,6,12,8,8,40].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, wsRank, 'ランク別個体リスト');
+  }
+
   const ds=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
   XLSX.writeFile(wb, '肥育牛舎マップ_'+ds+'.xlsx');
 }
@@ -1764,6 +1832,8 @@ async function loadTreatFile(input){
     const urgentCnt=TREAT_DATA.filter(t=>t.eventType==='urgent').length;
     bar.className='treat-bar loaded';
     bar.innerHTML='<span>&#10003;</span><strong>治療 '+treatCnt+'件 / 死亡 '+deathCnt+'件 / 緊急出荷 '+urgentCnt+'件（'+file.name+'）</strong>';
+    applyAutoRank();
+    renderMap();
     renderTreatPage();
   }catch(e){
     bar.className='treat-bar';
@@ -2993,6 +3063,87 @@ function rptClearBarns(){
   rptSelectedFarms = new Set(); // 空のSet（nullではなくempty）
   renderRptBarnFilter();
   buildReport();
+}
+
+
+// ━━━ 自動ランク計算 ━━━
+function calcAutoRank(treatCount){
+  if(treatCount >= 10) return 3;
+  if(treatCount >= 7)  return 2;
+  if(treatCount >= 4)  return 1;
+  return 0;
+}
+
+// 治療台帳読み込み後に全個体の治療回数・ランクを更新
+function applyAutoRank(){
+  let updated = 0;
+  Object.keys(cattle).forEach(k=>{
+    const c = cattle[k];
+    if(!c) return;
+    const tag5 = String(c.fullId).slice(-5);
+    // 様子見除外済みのTREAT_DATAから件数カウント
+    const cnt = TREAT_DATA.filter(t=>(!t.eventType||t.eventType==='treat')&&t.tag5===tag5).length;
+    c.treatCount = cnt;
+    const autoRank = calcAutoRank(cnt);
+    // 手動ランクが自動より高ければ手動を維持、低ければ自動を適用
+    if(autoRank > (c.sickRank||0)){
+      c.sickRank = autoRank;
+      updated++;
+    } else if(autoRank < (c.sickRank||0) && c.sickRank === calcAutoRank(cnt)){
+      // 治療回数が減った場合（再計算で下がる場合）は自動を適用
+      c.sickRank = autoRank;
+    }
+  });
+  saveToStorage();
+  return updated;
+}
+
+
+// ━━━ マップ複数選択ランク変更 ━━━
+let multiSelectMode = false;
+let selectedCells = new Set();
+
+function toggleMultiSelect(){
+  multiSelectMode = !multiSelectMode;
+  const btn = document.getElementById('multi-select-btn');
+  const bar = document.getElementById('multi-select-bar');
+  if(multiSelectMode){
+    btn.style.background='#fff8e6';btn.style.borderColor='#EF9F27';
+    btn.textContent='☑ 複数選択中（終了）';
+    bar.style.display='flex';
+  } else {
+    btn.style.background='';btn.style.borderColor='#EF9F27';
+    btn.textContent='☑ 複数選択モード';
+    bar.style.display='none';
+    clearMultiSelect();
+  }
+}
+
+function clearMultiSelect(){
+  selectedCells.forEach(k=>{
+    const el=document.getElementById('cell-'+k.replace(/:/g,'-'));
+    if(el) el.style.outline='';
+  });
+  selectedCells.clear();
+  updateMultiSelectCount();
+}
+
+function updateMultiSelectCount(){
+  const el=document.getElementById('multi-select-cnt');
+  if(el) el.textContent=selectedCells.size+'頭選択中';
+}
+
+function applyMultiRank(){
+  if(!selectedCells.size){alert('個体を選択してください');return;}
+  const rank=parseInt(document.getElementById('multi-rank-sel').value);
+  const rankLabel=['健康','要観察','病畜','重篤'];
+  if(!confirm(selectedCells.size+'頭のランクを「'+rank+'-'+rankLabel[rank]+'」に変更しますか？'))return;
+  selectedCells.forEach(k=>{
+    if(cattle[k]) cattle[k].sickRank=rank;
+  });
+  saveToStorage();
+  clearMultiSelect();
+  renderMap();
 }
 
 </script></body></html>
