@@ -215,6 +215,16 @@ tbody tr:last-child td{border-bottom:none}
 .badge-green{background:#e8f5ee;color:#1a6b40;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500}
 .badge-gray{background:#f0efe8;color:#555;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:500}
 @media print{.nav,.rpt-section .btn,.btn-row{display:none!important}#pg-rpt{display:block!important;padding:0}body{background:#fff}}
+
+/* 出荷成績 */
+.ship-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px}
+.ship-kpi-card{background:#fff;border:1px solid #e0dfd8;border-radius:8px;padding:10px 12px;text-align:center}
+.ship-kpi-card .kl{font-size:11px;color:#888;margin-bottom:2px}
+.ship-kpi-card .kv{font-size:20px;font-weight:600;color:#1a1a1a}
+.ship-kpi-card .ks{font-size:11px;color:#888;margin-top:2px}
+.ship-filter{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:10px 14px;background:#fff;border:1px solid #e0dfd8;border-radius:8px}
+.ship-filter label{font-size:12px;color:#666;font-weight:500}
+.ship-filter select,.ship-filter input{font-size:12px;padding:4px 7px;border:1px solid #ddd;border-radius:5px;background:#fff}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -262,6 +272,7 @@ tbody tr:last-child td{border-bottom:none}
   <div class="nb" id="nav-trt" onclick="goPage('trt')">💉 治療履歴</div>
   <div class="nb" id="nav-ops" onclick="goPage('ops')">🚚 出荷・移動</div>
   <div class="nb" id="nav-rpt" onclick="goPage('rpt')">📋 健康レポート</div>
+  <div class="nb" id="nav-ship" onclick="goPage('ship')">📦 出荷成績</div>
 </div>
 
 <!-- ═══ 一括入力 ═══ -->
@@ -661,6 +672,94 @@ tbody tr:last-child td{border-bottom:none}
   </div>
 </div></div>
 
+
+<!-- 出荷成績ページ -->
+<div class="pg" id="pg-ship"><div class="mxw">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:16px;font-weight:600;color:#333">📦 出荷成績</div>
+    <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#1D9E75;color:#fff;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer">
+      📂 差益表を読み込む（.xls/.xlsx）
+      <input type="file" id="ship-file-inp" accept=".xls,.xlsx" style="display:none" onchange="loadShipFile(this)">
+    </label>
+  </div>
+  <div id="ship-load-bar" style="display:none"></div>
+
+  <!-- フィルター -->
+  <div class="ship-filter" id="ship-filter-area" style="display:none">
+    <label>期間：</label>
+    <input type="month" id="ship-from" onchange="renderShipPage()">
+    <span style="font-size:12px;color:#888">〜</span>
+    <input type="month" id="ship-to" onchange="renderShipPage()">
+    <label>農場：</label>
+    <div id="ship-farm-btns" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+    <button class="btn btn-sm" onclick="shipFarmAll()">全選択</button>
+    <button class="btn btn-sm" onclick="shipFarmClear()">全解除</button>
+    <label>品種：</label>
+    <select id="ship-breed" onchange="renderShipPage()">
+      <option value="">全て</option>
+      <option value="和牛去勢">和牛去勢</option>
+      <option value="和牛雌">和牛雌</option>
+      <option value="和牛経産">和牛経産</option>
+      <option value="交雑去勢">交雑去勢</option>
+      <option value="交雑雌">交雑雌</option>
+      <option value="交雑経産">交雑経産</option>
+    </select>
+    <label>区分：</label>
+    <select id="ship-type" onchange="renderShipPage()">
+      <option value="">全て</option>
+      <option value="normal">通常出荷のみ</option>
+      <option value="urgent">緊急屠畜のみ</option>
+    </select>
+    <button class="btn btn-sm" onclick="clearShipFilter()">リセット</button>
+    <span id="ship-cnt" style="font-size:12px;color:#888;margin-left:4px"></span>
+  </div>
+
+  <!-- KPIカード -->
+  <div class="ship-kpi" id="ship-kpi" style="display:none"></div>
+
+  <!-- グラフ -->
+  <div id="ship-charts" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div style="background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">📊 月別出荷頭数</div>
+        <canvas id="chart-ship-count" height="160"></canvas>
+      </div>
+      <div style="background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">📈 月別平均BMS</div>
+        <canvas id="chart-ship-bms" height="160"></canvas>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div style="background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">⚖️ 月別平均枝重(kg)</div>
+        <canvas id="chart-ship-carcass" height="160"></canvas>
+      </div>
+      <div style="background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">💴 月別平均売上(万円)</div>
+        <canvas id="chart-ship-sale" height="160"></canvas>
+      </div>
+    </div>
+    <div id="ship-diff-area" style="display:none;margin-bottom:12px">
+      <div style="background:#fff;border:1px solid #1D9E75;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:#1a6b40;margin-bottom:8px">🔓 月別平均差益(万円)</div>
+        <canvas id="chart-ship-diff" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 農場×品種サマリーテーブル -->
+  <div id="ship-table-area" style="display:none">
+    <div style="background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:14px">
+      <div style="font-size:13px;font-weight:600;color:#555;margin-bottom:10px">農場×品種別成績</div>
+      <div style="overflow-x:auto">
+        <table id="ship-breed-table" style="width:100%;border-collapse:collapse;font-size:13px;min-width:700px"></table>
+      </div>
+    </div>
+  </div>
+
+  <div id="ship-empty" style="text-align:center;color:#aaa;padding:40px">差益表ファイル（経産肥育差益表.xls）を読み込んでください</div>
+</div></div>
+
 <!-- モーダル -->
 <div id="mbg" class="mbg" style="display:none" onclick="closeMod(event)">
   <div class="modal" onclick="event.stopPropagation()">
@@ -809,7 +908,9 @@ async function parseLedgerExcel(arrayBuffer, statusCallback) {
       const dobDate = dob instanceof Date ? dob : (dob ? new Date(dob) : null);
       const dobStr = dobDate && !isNaN(dobDate) ? dobDate.toISOString().slice(0,10) : null;
       const age = calcAge(dobDate);
-      if (age === null || age < 0 || age > 120) continue;
+      if (age === null || age < 0) continue;
+      if (!isKeisan && age > 120) continue; // 未経産・去勢は120ヶ月上限
+      if (isKeisan && age > 220) continue;  // 経産は220ヶ月上限（約18年）
       const name = row[nameCol] ? String(row[nameCol]).trim().slice(0,10) : '';
 
       const tag5 = fullId.slice(-5);
@@ -825,7 +926,13 @@ async function parseLedgerExcel(arrayBuffer, statusCallback) {
       const introSrcCol = isKeisan ? 17 : 16;
       const introSrcRaw = row[introSrcCol] ? String(row[introSrcCol]).trim() : '';
       const origin = breed==='F1' ? '導入' : (introSrcRaw.includes('格上') ? '自家産' : '導入');
-      tag5map[tag5].push([fullId, name, sex, dobStr || '', Math.floor(age), breed, introStr, origin]);
+      // 出荷済み判定（出荷日列に日付あり、または価格列に死亡・緊急）
+      const shipDateCol2 = isKeisan ? 19 : 19; // 両方19列
+      const shipPriceCol2 = shipDateCol2 + 1;
+      const shipDateVal2 = row[shipDateCol2];
+      const shipPriceVal2 = row[shipPriceCol2] ? String(row[shipPriceCol2]).trim() : '';
+      const isShipped = !!(shipDateVal2) || shipPriceVal2.includes('死亡') || shipPriceVal2.includes('緊急');
+      tag5map[tag5].push([fullId, name, sex, dobStr || '', Math.floor(age), breed, introStr, origin, isShipped]);
     }
   }
 
@@ -965,10 +1072,12 @@ async function loadFromFile(input) {
     await parseLossFromLedger(buf, ()=>{});
     // 既存のローカルストレージデータを復元してからマップ表示
     loadFromStorage();
+    const removedCnt = removeShippedFromMap();
     setTimeout(() => {
       document.getElementById('lov').style.display = 'none';
       renderBmgr(); addRows(10);
       if(Object.keys(cattle).length > 0) renderMap();
+      if(removedCnt > 0) console.log('出荷・死亡・緊急で'+removedCnt+'頭をマップから除去しました');
     }, 400);
   } catch(e) {
     document.getElementById('lov-loading').style.display = 'none';
@@ -990,6 +1099,7 @@ async function updateLedger(input) {
     const buf = await file.arrayBuffer();
     DB = await parseLedgerExcel(buf, () => {});
     await parseLossFromLedger(buf, ()=>{});
+    removeShippedFromMap();
     const total = Object.keys(DB).length;
     const dateStr = new Date().toLocaleDateString('ja-JP');
     const statusText = `台帳: ${total.toLocaleString()}件 ／ ${file.name} ／ ${dateStr}`;
@@ -1042,7 +1152,7 @@ function restoreAndStart() {
 
 // ── ページ切替 ──
 function goPage(p){
-  ['inp','map','trt','ops','rpt'].forEach(x=>{
+  ['inp','map','trt','ops','rpt','ship'].forEach(x=>{
     const pg=document.getElementById('pg-'+x);
     const nb=document.getElementById('nav-'+x);
     if(pg) pg.classList.toggle('on',x===p);
@@ -1051,6 +1161,7 @@ function goPage(p){
   if(p==='map') renderMap();
   if(p==='trt') renderTreatPage();
   if(p==='ops' && opsRows.length===0) addOpsRows(5);
+  if(p==='ship') renderShipPage();
   if(p==='rpt'){
     // 初回のみデフォルト期間を設定（過去6ヶ月）
     const fromEl=document.getElementById('rpt-from');
@@ -1269,6 +1380,8 @@ function doRegister(){
     }
     if(targetPen===null||targetIdx===null)return;
     const k=penKey(r.barnId,targetPen,targetIdx);
+    // 出荷済み・死亡・緊急は登録しない
+    if(r.lookup[8]) return;
     cattle[k]={fullId:r.lookup[0],name:r.lookup[1]||'',sex:SEX_MAP[r.lookup[2]]||r.lookup[2],
       dob:r.lookup[3],age:r.lookup[4],breed:r.lookup[5]||'K',introDate:r.lookup[6]||'',origin:r.lookup[7]||'導入',
       sickRank:r.rank||0,treatCount:0,
@@ -3144,6 +3257,357 @@ function applyMultiRank(){
   saveToStorage();
   clearMultiSelect();
   renderMap();
+}
+
+
+// ━━━ 台帳と照合してマップから出荷済みを除去 ━━━
+function removeShippedFromMap(){
+  if(!DB) return 0;
+  let removed = 0;
+  Object.keys(cattle).forEach(k=>{
+    const c = cattle[k];
+    if(!c) return;
+    const tag5 = String(c.fullId).slice(-5);
+    const records = DB[tag5];
+    if(!records) return;
+    // この個体のレコードで出荷済みフラグを確認
+    const isShipped = records.some(r => r[8] === true);
+    if(isShipped){
+      delete cattle[k];
+      removed++;
+    }
+  });
+  if(removed > 0) saveToStorage();
+  return removed;
+}
+
+
+
+
+// ━━━ 出荷成績 ━━━
+let SHIP_DATA = [];
+let _chartShipCount=null,_chartShipBms=null,_chartShipCarcass=null,_chartShipSale=null,_chartShipDiff=null;
+let _shipDiffMode = false; // 差益表示モード（パスワード解除後）
+const SHIP_DIFF_PASS = '1234'; // ← パスワード（変更可）
+
+function toFloatSafe(v){
+  try{ const f=parseFloat(v); return isNaN(f)?null:f; }catch(e){return null;}
+}
+
+async function loadShipFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  const bar = document.getElementById('ship-load-bar');
+  bar.style.display='block';
+  bar.style.cssText='display:block;background:#fff8e6;border:1px solid #f5c842;border-radius:8px;padding:8px 14px;font-size:12px;color:#7a5c00;margin-bottom:12px';
+  bar.textContent='⏳ 読み込み中...';
+  try{
+    const buf = await file.arrayBuffer();
+    const wb2 = XLSX.read(buf, {type:'array', cellDates:true, bookVBA:false});
+    SHIP_DATA = [];
+    const skipNames = ['Sheet','売掛','予備','データ','方法','計算','sheet'];
+    for(const sname of wb2.SheetNames){
+      if(skipNames.some(s=>sname.includes(s))) continue;
+      const ws2 = wb2.Sheets[sname];
+      const rows2 = XLSX.utils.sheet_to_json(ws2, {header:1, defval:null});
+      let currentUrgent = false;
+      for(const row of rows2){
+        if(!row) continue;
+        const rowStr = row.map(v=>v?String(v):'').join(' ');
+        // ブロックヘッダー行判定
+        if(rowStr.includes('出荷日：') && rowStr.length < 300){
+          currentUrgent = rowStr.includes('緊急屠畜');
+          continue;
+        }
+        // データ行判定（番号列が数値）
+        if(!row[0]) continue;
+        const numStr = String(row[0]).replace(/\.0$/,'').trim();
+        if(!/^\d+$/.test(numStr)) continue;
+        // 列27（保留・死亡）チェック
+        const col27 = row[27] ? String(row[27]).trim() : '';
+        if(['保留','死亡','下ろし'].some(kw=>col27.includes(kw))) continue;
+        // 耳標
+        const eid = row[3] ? String(row[3]).replace(/\.0$/,'').trim() : '';
+        if(!eid || !/^\d+$/.test(eid) || eid.length<5) continue;
+        // 売上・枝重
+        const sale = toFloatSafe(row[14]) || 0;
+        const carcass = toFloatSafe(row[12]);
+        // 売上0かつ枝重あり → 未入力除外
+        if(sale===0 && carcass && carcass>0) continue;
+        // 出荷日
+        const shipDateVal = row[1];
+        let shipDate = null;
+        if(shipDateVal instanceof Date) shipDate=shipDateVal;
+        else if(typeof shipDateVal==='number') shipDate=new Date((shipDateVal-25569)*86400*1000);
+        else if(shipDateVal) shipDate=new Date(String(shipDateVal));
+        if(!shipDate||isNaN(shipDate)) continue;
+        const bmsV = toFloatSafe(row[26]);
+        const diffV = toFloatSafe(row[15]);
+        const gradeRaw = row[20] ? String(row[20]).trim().split('\n')[0] : '';
+        const breedRaw = row[4] ? String(row[4]).trim() : '';
+        const farmRaw  = row[16] ? String(row[16]).trim() : '不明';
+        // 品種6区分
+        const isF1 = breedRaw==='交雑種' || breedRaw==='去' && farmRaw==='交';
+        const breedKey = (() => {
+          if(breedRaw==='去勢'||breedRaw==='去') return isF1?'交雑去勢':'和牛去勢';
+          if(breedRaw==='未経産'||breedRaw==='雌') return isF1?'交雑雌':'和牛雌';
+          if(breedRaw==='経産') return isF1?'交雑経産':'和牛経産';
+          if(breedRaw==='交雑種') return '交雑去勢'; // 交雑種は去勢扱い
+          return '和牛去勢';
+        })();
+        SHIP_DATA.push({
+          tag5: eid.slice(-5), fullId: eid,
+          shipDate, shipDateStr: getMonthKey(shipDate),
+          breed: breedRaw, breedKey,
+          farm: farmRaw,
+          carcass: (carcass&&carcass>0)?carcass:null,
+          bms: (bmsV&&bmsV>=1&&bmsV<=12)?bmsV:null,
+          sale, diff: diffV,
+          grade: gradeRaw,
+          urgent: currentUrgent,
+        });
+      }
+    }
+    const normal=SHIP_DATA.filter(r=>!r.urgent).length;
+    const urgent=SHIP_DATA.filter(r=>r.urgent).length;
+    bar.style.cssText='display:block;background:#e8f5ee;border:1px solid #b7e4c7;border-radius:8px;padding:8px 14px;font-size:12px;color:#1a6b40;margin-bottom:12px';
+    bar.textContent='✓ '+SHIP_DATA.length.toLocaleString()+'件（通常'+normal.toLocaleString()+' / 緊急屠畜'+urgent+'）読み込み済み（'+file.name+'）';
+    initShipFilters();
+    renderShipPage();
+  }catch(e){
+    bar.style.cssText='display:block;background:#ffeaea;border:1px solid #F09595;border-radius:8px;padding:8px 14px;font-size:12px;color:#c00;margin-bottom:12px';
+    bar.textContent='❌ エラー: '+e.message;
+    console.error(e);
+  }
+  input.value='';
+}
+
+let _shipSelectedFarms = null; // null=全選択
+
+function initShipFilters(){
+  const farms = [...new Set(SHIP_DATA.map(r=>r.farm))].filter(Boolean).sort();
+  _shipSelectedFarms = new Set(farms); // 初期は全選択
+  renderShipFarmBtns(farms);
+}
+
+function renderShipFarmBtns(farms){
+  const div = document.getElementById('ship-farm-btns');
+  if(!div) return;
+  const sel = _shipSelectedFarms;
+  div.innerHTML = farms.map(f=>{
+    const on = !sel || sel.has(f);
+    const bc=on?'#1D9E75':'#ddd', bg=on?'#e8f5ee':'#fff', fc=on?'#085041':'#555';
+    return '<button data-farm="'+f+'" onclick="toggleShipFarm(this.dataset.farm)" style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;border:1.5px solid '+bc+';background:'+bg+';color:'+fc+'">'+f+'</button>';
+  }).join('');
+}
+
+function toggleShipFarm(farm){
+  if(!_shipSelectedFarms) _shipSelectedFarms=new Set(SHIP_DATA.map(r=>r.farm).filter(Boolean));
+  if(_shipSelectedFarms.has(farm)) _shipSelectedFarms.delete(farm);
+  else _shipSelectedFarms.add(farm);
+  const farms=[...new Set(SHIP_DATA.map(r=>r.farm))].filter(Boolean).sort();
+  renderShipFarmBtns(farms);
+  renderShipPage();
+}
+
+function shipFarmAll(){
+  _shipSelectedFarms=new Set(SHIP_DATA.map(r=>r.farm).filter(Boolean));
+  const farms=[...new Set(SHIP_DATA.map(r=>r.farm))].filter(Boolean).sort();
+  renderShipFarmBtns(farms);
+  renderShipPage();
+}
+
+function shipFarmClear(){
+  _shipSelectedFarms=new Set();
+  const farms=[...new Set(SHIP_DATA.map(r=>r.farm))].filter(Boolean).sort();
+  renderShipFarmBtns(farms);
+  renderShipPage();
+}
+
+function clearShipFilter(){
+  ['ship-from','ship-to'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['ship-breed','ship-type'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  shipFarmAll();
+}
+
+function getShipFiltered(){
+  const from  = (document.getElementById('ship-from')||{value:''}).value;
+  const to    = (document.getElementById('ship-to')||{value:''}).value;
+  const breed = (document.getElementById('ship-breed')||{value:''}).value;
+  // 農場フィルター（ボタン式複数選択）
+  const farmFilter = _shipSelectedFarms;
+  const type  = (document.getElementById('ship-type')||{value:''}).value; // 'normal'/'urgent'/''
+  return SHIP_DATA.filter(r=>{
+    if(from && r.shipDateStr < from) return false;
+    if(to   && r.shipDateStr > to)   return false;
+    if(breed && r.breedKey !== breed) return false;
+    if(farmFilter && farmFilter.size>0 && !farmFilter.has(r.farm)) return false;
+    if(type==='normal' && r.urgent)  return false;
+    if(type==='urgent' && !r.urgent) return false;
+    return true;
+  });
+}
+
+function avg(arr){ return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0; }
+
+function shipPassCheck(){
+  const pass = prompt('差益を表示するにはパスワードを入力してください');
+  if(pass===SHIP_DIFF_PASS){
+    _shipDiffMode=true;
+    renderShipPage();
+  } else if(pass!==null){
+    alert('パスワードが違います');
+  }
+}
+
+function renderShipPage(){
+  if(!SHIP_DATA.length) return;
+  document.getElementById('ship-empty').style.display='none';
+  document.getElementById('ship-filter-area').style.display='flex';
+  document.getElementById('ship-kpi').style.display='grid';
+  document.getElementById('ship-charts').style.display='block';
+  document.getElementById('ship-table-area').style.display='block';
+
+  const data = getShipFiltered();
+  document.getElementById('ship-cnt').textContent=data.length.toLocaleString()+'件';
+
+  const normal  = data.filter(r=>!r.urgent);
+  const urgent  = data.filter(r=>r.urgent);
+  const bmsL    = normal.filter(r=>r.bms).map(r=>r.bms);
+  const carL    = normal.filter(r=>r.carcass).map(r=>r.carcass);
+  const saleL   = normal.filter(r=>r.sale).map(r=>r.sale);
+  const diffL   = normal.filter(r=>r.diff!=null).map(r=>r.diff);
+  const a5cnt   = normal.filter(r=>r.grade==='A'&&r.bms>=5).length;
+  const a4cnt   = normal.filter(r=>r.grade==='A'&&r.bms>=4).length;
+
+  // KPIカード
+  const kpiHtml = [
+    {l:'出荷頭数(通常)', v:normal.length.toLocaleString()+'頭', s:'緊急屠畜 '+urgent.length+'頭'},
+    {l:'平均BMS',  v:bmsL.length?avg(bmsL).toFixed(2):'—', s:''},
+    {l:'平均枝重', v:carL.length?avg(carL).toFixed(1)+'kg':'—', s:''},
+    {l:'平均売上', v:saleL.length?Math.round(avg(saleL)).toLocaleString()+'円':'—', s:''},
+    {l:'A5率',     v:normal.length?Math.round(a5cnt/normal.length*100)+'%':'—', s:a5cnt+'頭'},
+    {l:'A4以上率', v:normal.length?Math.round(a4cnt/normal.length*100)+'%':'—', s:a4cnt+'頭'},
+    ..._shipDiffMode?[{l:'平均差益', v:diffL.length?Math.round(avg(diffL)).toLocaleString()+'円':'—', s:'', highlight:true}]:[
+      {l:'差益', v:'🔒', s:'クリックして表示', onclick:'shipPassCheck()'}
+    ]
+  ].map(k=>`<div class="ship-kpi-card" ${k.onclick?'onclick="'+k.onclick+'" style="cursor:pointer"':''} style="${k.highlight?'border-color:#1D9E75':''}">
+    <div class="kl">${k.l}</div>
+    <div class="kv" style="${k.onclick?'color:#888;font-size:16px':''}">${k.v}</div>
+    <div class="ks">${k.s||''}</div>
+  </div>`).join('');
+  document.getElementById('ship-kpi').innerHTML=kpiHtml;
+
+  // 月リスト
+  const months=[...new Set(data.map(r=>r.shipDateStr))].filter(Boolean).sort();
+  const labels=months.map(m=>{const[y,mo]=m.split('-');return y.slice(2)+'/'+parseInt(mo)+'月';});
+
+  const breedKeys=['和牛去勢','和牛雌','和牛経産','交雑去勢','交雑雌','交雑経産'];
+  const breedColors={'和牛去勢':'#1D9E75','和牛雌':'#2980B9','和牛経産':'#8E44AD','交雑去勢':'#888','交雑雌':'#EF9F27','交雑経産':'#D85A30'};
+
+  const mkDatasets = (fn) => breedKeys.map(bk=>({
+    label:bk,
+    data:months.map(m=>{
+      const sub=normal.filter(r=>r.shipDateStr===m&&r.breedKey===bk);
+      if(!sub.length) return null;
+      const v=fn(sub);
+      return (v===null||v===undefined||isNaN(v))?null:parseFloat(v.toFixed(2));
+    }),
+    borderColor:breedColors[bk], backgroundColor:breedColors[bk]+'33',
+    tension:0.3, pointRadius:3, spanGaps:true, fill:false
+  }));
+
+  // 棒グラフ（頭数）
+  const countDs = breedKeys.map(bk=>({
+    label:bk,
+    data:months.map(m=>data.filter(r=>r.shipDateStr===m&&r.breedKey===bk&&!r.urgent).length),
+    backgroundColor:breedColors[bk]+'BB', borderColor:breedColors[bk], borderWidth:1, stack:'cnt'
+  }));
+  // 緊急屠畜を重ねる
+  countDs.push({label:'緊急屠畜',data:months.map(m=>data.filter(r=>r.shipDateStr===m&&r.urgent).length),backgroundColor:'#E24B4A55',borderColor:'#E24B4A',borderWidth:1,stack:'cnt'});
+
+  const baseOpts=(yLabel,stacked)=>({
+    responsive:true,maintainAspectRatio:true,
+    plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:9,padding:6}}},
+    scales:{
+      x:{stacked:!!stacked,ticks:{font:{size:9},maxRotation:45,maxTicksLimit:24}},
+      y:{stacked:!!stacked,beginAtZero:true,ticks:{font:{size:9}},title:{display:true,text:yLabel,font:{size:9}}}
+    }
+  });
+
+  const mkChart=(id,type,ds,yLabel,stacked,ref)=>{
+    if(ref)ref.destroy();
+    const ctx=document.getElementById(id);
+    if(!ctx)return null;
+    return new Chart(ctx.getContext('2d'),{type,data:{labels,datasets:ds},options:baseOpts(yLabel,stacked)});
+  };
+
+  _chartShipCount   = mkChart('chart-ship-count',  'bar',  countDs,'頭数',true,_chartShipCount);
+  _chartShipBms     = mkChart('chart-ship-bms',    'line', mkDatasets(sub=>{const v=sub.filter(r=>r.bms).map(r=>r.bms);return v.length?avg(v):null;}),'BMS',false,_chartShipBms);
+  _chartShipCarcass = mkChart('chart-ship-carcass','line', mkDatasets(sub=>{const v=sub.filter(r=>r.carcass).map(r=>r.carcass);return v.length?avg(v):null;}),'枝重(kg)',false,_chartShipCarcass);
+  _chartShipSale    = mkChart('chart-ship-sale',   'line', mkDatasets(sub=>{const v=sub.filter(r=>r.sale>0).map(r=>r.sale/10000);return v.length?avg(v):null;}),'売上(万円)',false,_chartShipSale);
+  if(_shipDiffMode){
+    _chartShipDiff = mkChart('chart-ship-diff','line',mkDatasets(sub=>{const v=sub.filter(r=>r.diff!=null).map(r=>r.diff/10000);return v.length?avg(v):null;}),'差益(万円)',false,_chartShipDiff);
+  }
+
+  // 農場×品種サマリーテーブル
+  const farms=['（全体）',...new Set(normal.map(r=>r.farm))].filter(Boolean);
+  const thead='<thead><tr style="background:#f5f4ef">'+
+    ['農場','頭数','平均BMS','平均枝重(kg)','平均売上(円)','A5率','A4以上率',...(_shipDiffMode?['平均差益(円)']:[])].map(h=>`<th style="padding:6px 10px;text-align:${h==='農場'?'left':'right'};font-size:11px;font-weight:600;color:#666;border-bottom:1px solid #e0dfd8">${h}</th>`).join('')+
+    '</tr></thead>';
+
+  const breedOrder=['和牛去勢','和牛雌','和牛経産','交雑去勢','交雑雌','交雑経産'];
+  let tbody='';
+  farms.forEach(farm=>{
+    const fd = farm==='（全体）'?normal:normal.filter(r=>r.farm===farm);
+    if(!fd.length) return;
+    // 農場行
+    const bmsL2=fd.filter(r=>r.bms).map(r=>r.bms);
+    const carL2=fd.filter(r=>r.carcass).map(r=>r.carcass);
+    const salL2=fd.filter(r=>r.sale).map(r=>r.sale);
+    const difL2=fd.filter(r=>r.diff!=null).map(r=>r.diff);
+    const a5=fd.filter(r=>r.grade==='A'&&r.bms>=5).length;
+    const a4=fd.filter(r=>r.grade==='A'&&r.bms>=4).length;
+    const isBold=farm==='（全体）';
+    tbody+=`<tr style="${isBold?'font-weight:600;background:#f8f7f2':''}">
+      <td style="padding:6px 10px;border-bottom:.5px solid #f0efe8;font-weight:600">${farm}</td>
+      <td style="padding:6px 10px;border-bottom:.5px solid #f0efe8;text-align:right">${fd.length.toLocaleString()}</td>
+      <td style="padding:6px 10px;border-bottom:.5px solid #f0efe8;text-align:right">${bmsL2.length?avg(bmsL2).toFixed(2):'—'}</td>
+      <td style="padding:6px 10px;border-bottom:.5px solid #f0efe8;text-align:right">${carL2.length?avg(carL2).toFixed(1):'—'}</td>
+      <td style="padding:6px 10px;border-bottom:.5px solid #f0efe8;text-align:right">${salL2.length?Math.round(avg(salL2)).toLocaleString():'—'}</td>
+      <td style="padding:6px 10px;border-bottom:.5px solid #f0efe8;text-align:right">${fd.length?Math.round(a5/fd.length*100)+'%':'—'}</td>
+      <td style="padding:6px 10px;border-bottom:.5px solid #f0efe8;text-align:right">${fd.length?Math.round(a4/fd.length*100)+'%':'—'}</td>
+      ${_shipDiffMode?`<td style="padding:6px 10px;border-bottom:.5px solid #f0efe8;text-align:right;color:${avg(difL2)>=0?'#1a6b40':'#c00'}">${difL2.length?Math.round(avg(difL2)).toLocaleString():'—'}</td>`:''}
+    </tr>`;
+    // 品種別サブ行
+    breedOrder.forEach(bk=>{
+      const bd=fd.filter(r=>r.breedKey===bk);
+      if(!bd.length) return;
+      const bb=bd.filter(r=>r.bms).map(r=>r.bms);
+      const bc=bd.filter(r=>r.carcass).map(r=>r.carcass);
+      const bs=bd.filter(r=>r.sale).map(r=>r.sale);
+      const bdif=bd.filter(r=>r.diff!=null).map(r=>r.diff);
+      const ba5=bd.filter(r=>r.grade==='A'&&r.bms>=5).length;
+      const ba4=bd.filter(r=>r.grade==='A'&&r.bms>=4).length;
+      tbody+=`<tr style="background:#fafaf8">
+        <td style="padding:4px 10px 4px 24px;border-bottom:.5px solid #f0efe8;font-size:12px;color:#555">└ ${bk}</td>
+        <td style="padding:4px 10px;border-bottom:.5px solid #f0efe8;text-align:right;font-size:12px">${bd.length}</td>
+        <td style="padding:4px 10px;border-bottom:.5px solid #f0efe8;text-align:right;font-size:12px">${bb.length?avg(bb).toFixed(2):'—'}</td>
+        <td style="padding:4px 10px;border-bottom:.5px solid #f0efe8;text-align:right;font-size:12px">${bc.length?avg(bc).toFixed(1):'—'}</td>
+        <td style="padding:4px 10px;border-bottom:.5px solid #f0efe8;text-align:right;font-size:12px">${bs.length?Math.round(avg(bs)).toLocaleString():'—'}</td>
+        <td style="padding:4px 10px;border-bottom:.5px solid #f0efe8;text-align:right;font-size:12px">${bd.length?Math.round(ba5/bd.length*100)+'%':'—'}</td>
+        <td style="padding:4px 10px;border-bottom:.5px solid #f0efe8;text-align:right;font-size:12px">${bd.length?Math.round(ba4/bd.length*100)+'%':'—'}</td>
+        ${_shipDiffMode?`<td style="padding:4px 10px;border-bottom:.5px solid #f0efe8;text-align:right;font-size:12px;color:${avg(bdif)>=0?'#1a6b40':'#c00'}">${bdif.length?Math.round(avg(bdif)).toLocaleString():'—'}</td>`:''}
+      </tr>`;
+    });
+  });
+
+  const tbl=document.getElementById('ship-breed-table');
+  if(tbl) tbl.innerHTML=thead+'<tbody>'+tbody+'</tbody>';
+
+  // 差益グラフエリア表示切替
+  const diffArea=document.getElementById('ship-diff-area');
+  if(diffArea) diffArea.style.display=_shipDiffMode?'block':'none';
 }
 
 </script></body></html>
