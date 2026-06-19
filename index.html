@@ -3267,11 +3267,14 @@ function removeShippedFromMap(){
   Object.keys(cattle).forEach(k=>{
     const c = cattle[k];
     if(!c) return;
-    const tag5 = String(c.fullId).slice(-5);
+    const fullId = String(c.fullId);
+    const tag5 = fullId.slice(-5);
     const records = DB[tag5];
     if(!records) return;
-    // この個体のレコードで出荷済みフラグを確認
-    const isShipped = records.some(r => r[8] === true);
+    // fullIdが一致するレコードのみ出荷済み判定（下5桁の重複誤判定を防ぐ）
+    const matchedRecords = records.filter(r => String(r[0]) === fullId);
+    if(!matchedRecords.length) return;
+    const isShipped = matchedRecords.some(r => r[8] === true);
     if(isShipped){
       delete cattle[k];
       removed++;
