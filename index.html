@@ -1072,7 +1072,8 @@ async function loadFromFile(input) {
     await parseLossFromLedger(buf, ()=>{});
     // 既存のローカルストレージデータを復元してからマップ表示
     loadFromStorage();
-    const removedCnt = removeShippedFromMap();
+    // removeShippedFromMap() // 無効化：台帳出荷日による自動削除は危険なため
+    const removedCnt = 0;
     setTimeout(() => {
       document.getElementById('lov').style.display = 'none';
       renderBmgr(); addRows(10);
@@ -1099,7 +1100,7 @@ async function updateLedger(input) {
     const buf = await file.arrayBuffer();
     DB = await parseLedgerExcel(buf, () => {});
     await parseLossFromLedger(buf, ()=>{});
-    removeShippedFromMap();
+    // removeShippedFromMap(); // 無効化
     const total = Object.keys(DB).length;
     const dateStr = new Date().toLocaleDateString('ja-JP');
     const statusText = `台帳: ${total.toLocaleString()}件 ／ ${file.name} ／ ${dateStr}`;
@@ -1525,8 +1526,13 @@ function clickCell(barnId,pen,idx){
   document.getElementById('dp-ttl').textContent=`${b.name} ${pen}部屋　${c.name||''}`;
   const _isKeisan=(c.sex==='経産');
   const _introMo=_isKeisan?introMonths(c):null;
+  // 台帳の出荷済みフラグチェック
+  const _chkTag5=c.fullId?String(c.fullId).slice(-5):'';
+  const _dbRecs=DB&&_chkTag5?DB[_chkTag5]:null;
+  const _dbShipped=_dbRecs&&_dbRecs.filter(r=>String(r[0])===String(c.fullId)).some(r=>r[8]===true);
   const _introHtml=_isKeisan?('<div class="drow"><span class="dk">導入日</span><span class="dv">'+(c.introDate||'—')+'</span></div><div class="drow"><span class="dk">導入後月数</span><span class="dv">'+_introMo+'ヶ月</span></div>'):'';
   document.getElementById('dp-body').innerHTML=
+    (_dbShipped?'<div style="background:#fff8e6;border:1px solid #f5c842;border-radius:6px;padding:7px 12px;margin-bottom:8px;font-size:12px;color:#7a5c00">🚚 <strong>台帳では出荷済みの可能性があります</strong><br>出荷・移動タブから処理を確認してください</div>':'')+
     '<div class="drow"><span class="dk">個体識別番号</span><span class="dv">'+c.fullId+'</span></div>'+
     '<div class="drow"><span class="dk">名号</span><span class="dv">'+(c.name||'—')+'</span></div>'+
     '<div class="drow"><span class="dk">品種</span><span class="dv">'+(c.breed==='F1'?'F1（交雑種）':_isKeisan?'黒毛和種（経産）':'黒毛和種')+'</span></div>'+
@@ -1783,16 +1789,16 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, ws, 'マップ');
 
   // ── シート2: 個体一覧 ──
-  const listData = [['牛舎','部屋','個体識別番号','名号','性別','生年月日','月齢','病畜ランク','治療回数','状態']];
+  const listData = [['牛舎','部屋','個体識別番号','名号','性別','生年月日','月齢','病畜ランク','治療回数','状態','品種','導入日','自家産/導入']];
   Object.entries(cattle).sort(([a],[b])=>a.localeCompare(b)).forEach(([k,c])=>{
     if(!c)return;
     const [barnId,pen]=k.split(':');
     const b=BARNS.find(x=>x.id===barnId)||{name:barnId};
     const rankLabel=['健康','要観察','病畜','重篤'];
-    listData.push([b.name,pen+'部屋',c.fullId,c.name||'',c.sex,c.dob,(c.age||0)+'ヶ月',rankLabel[c.sickRank||0],c.treatCount||0,c.shipped?'出荷済み':'在舎']);
+    listData.push([b.name,pen+'部屋',c.fullId,c.name||'',c.sex,c.dob,(c.age||0)+'ヶ月',rankLabel[c.sickRank||0],c.treatCount||0,c.shipped?'出荷済み':'在舎',c.breed||'K',c.introDate||'',c.origin||'導入']);
   });
   const wsList = XLSX.utils.aoa_to_sheet(listData);
-  wsList['!cols']=[10,8,14,12,6,12,8,8,8,8].map(w=>({wch:w}));
+  wsList['!cols']=[10,8,14,12,6,12,8,8,8,8,8,12,8].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, wsList, '個体一覧');
 
   // ── シート3: 牛舎別サマリー ──
@@ -2114,7 +2120,12 @@ async function loadMapExcel(input) {
       for (let idx = 0; idx < b.penCap; idx++) {
         const k = b.id + ':' + pen + ':' + idx;
         if (!cattle[k]) {
-          cattle[k] = {fullId, name, sex, dob, age, sickRank, treatCount, barnId: b.id, pen, idx, shipped};
+          const breed2    = row[10] ? String(row[10]).trim() : 'K';
+          const introDate2 = row[11] ? String(row[11]).trim() : '';
+          const origin2    = row[12] ? String(row[12]).trim() : '導入';
+          cattle[k] = {fullId, name, sex, dob, age, sickRank, treatCount,
+            breed: breed2, introDate: introDate2, origin: origin2,
+            barnId: b.id, pen, idx, shipped};
           placed = true;
           break;
         }
@@ -2670,6 +2681,31 @@ function buildReport(){
 
   // ══════ セクション2: 要注意アラート ══════
   let alertHtml='';
+  // ── 台帳で出荷済みになっているのにマップに残っている個体チェック ──
+  if(DB){
+    const shippedInMap=[];
+    activeCattle.forEach(c=>{
+      const tag5=String(c.fullId).slice(-5);
+      const records=DB[tag5];
+      if(!records) return;
+      // fullIdが一致するレコードが出荷済みかチェック
+      const matched=records.filter(r=>String(r[0])===String(c.fullId));
+      if(matched.length && matched.some(r=>r[8]===true)){
+        const b=BARNS.find(x=>x.id===c.barnId)||{name:c.barnId};
+        shippedInMap.push({tag5, fullId:c.fullId, loc:b.name+' '+c.pen+'部屋', name:c.name||''});
+      }
+    });
+    if(shippedInMap.length){
+      alertHtml+=`<div class="rpt-alert">
+        🚚 <strong>台帳では出荷済みの可能性がある個体: ${shippedInMap.length}頭</strong>
+        <div style="font-size:12px;color:#666;margin-top:4px">
+          出荷・移動タブから処理してください。<br>
+          ${shippedInMap.map(r=>`<span style="display:inline-block;margin:2px 6px 2px 0">#${r.tag5} ${r.name||''} (${r.loc})</span>`).join('')}
+        </div>
+      </div>`;
+    }
+  }
+
   if(notInMap.length){
     alertHtml+=`<div class="rpt-alert">⚠️ <strong>マップに登録されていない治療牛 ${notInMap.length}頭</strong>
       <div style="font-size:12px;color:#666;margin-top:3px">耳標: ${notInMap.join(', ')}</div></div>`;
