@@ -177,6 +177,11 @@ tbody tr:last-child td{border-bottom:none}
 .pen.feed-a{border-color:#1D9E75;background:#f0fbf6}
 .pen.feed-b{border-color:#EF9F27;background:#fffbf0}
 .pen.feed-c{border-color:#E24B4A;background:#fff5f5}
+/* ドラッグ＆ドロップ */
+.pen.drag-over{border:2px dashed #1D9E75;background:#e8faf2!important}
+.pen.drag-selected{border:2px solid #1a6b40;background:#d0f5e3!important}
+.cc.dragging-cell{opacity:.4}
+.pen.dragging-pen{opacity:.5}
 .pen-feed-badge{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:3px;flex-shrink:0}
 .pfb-a{background:#1D9E75;color:#fff}
 .pfb-b{background:#EF9F27;color:#3d2400}
@@ -198,9 +203,32 @@ tbody tr:last-child td{border-bottom:none}
 /* レポート */
 .rpt-section{background:#fff;border:1px solid #e0dfd8;border-radius:10px;padding:16px;margin-bottom:14px}
 .rpt-section h3{font-size:14px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0efe8;display:flex;align-items:center;gap:6px}
-.rpt-alert{background:#ffeaea;border:1px solid #F09595;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px}
-.rpt-alert.warn{background:#fff8e6;border-color:#f5c842}
-.rpt-alert.ok{background:#e8f5ee;border-color:#b7e4c7}
+.rpt-alert{background:#ffeaea;border-left:4px solid #E24B4A;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:8px;font-size:13px;position:relative}
+.rpt-alert.warn{background:#fff8e6;border-left-color:#EF9F27}
+.rpt-alert.ok{background:#e8f5ee;border-left-color:#1D9E75}
+.rpt-alert.info{background:#e8f0fe;border-left-color:#3B82F6}
+.rpt-alert-title{font-weight:600;display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.rpt-alert-body{font-size:12px;color:#555;padding-left:2px;line-height:1.7}
+.rpt-alert-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.rpt-tag{display:inline-block;background:#fff;border:1px solid #ddd;border-radius:4px;padding:1px 6px;font-size:11px;color:#333}
+.rpt-week-box{background:#f5f4ef;border:1px solid #e0dfd8;border-radius:8px;padding:12px 14px;margin-bottom:8px}
+.rpt-week-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.rpt-week-card{background:#fff;border:1px solid #e0dfd8;border-radius:7px;padding:8px 12px}
+.rpt-week-label{font-size:11px;color:#888;font-weight:600;margin-bottom:4px}
+.rpt-week-num{font-size:20px;font-weight:700;color:#1a1a1a;display:inline}
+.rpt-week-unit{font-size:12px;color:#888;margin-left:2px}
+.rpt-week-detail{font-size:11px;color:#666;margin-top:4px;line-height:1.6}
+.rpt-week-comment{font-size:12px;color:#555;margin-top:8px;padding-top:8px;border-top:1px solid #e0dfd8;line-height:1.8}
+.week-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.week-tbl th{background:#1a6b40;color:#fff;padding:7px 10px;font-size:11px;font-weight:600;text-align:center;white-space:nowrap}
+.week-tbl th.lh{background:#155735;text-align:left}
+.week-tbl td{padding:6px 10px;border-bottom:1px solid #f0efe8;text-align:center;vertical-align:top}
+.week-tbl td.lc{text-align:left;font-weight:500;background:#f8f7f2;color:#333}
+.week-tbl tr:hover td{background:#f5fbf7}
+.week-tbl .dist{font-size:10px;color:#777;margin-top:2px;line-height:1.6;text-align:left}
+.week-tbl .pct{font-size:10px;color:#888}
+.week-num-hi{color:#c00;font-weight:600}
+.week-num-mid{color:#7a5c00;font-weight:600}
 .rpt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px}
 .rpt-card{background:#f8f7f2;border-radius:8px;padding:10px 12px}
 .rpt-card .rl{font-size:11px;color:#888;margin-bottom:3px}
@@ -588,6 +616,49 @@ tbody tr:last-child td{border-bottom:none}
     </div>
   </div>
 
+  <!-- 緊急待ちリスト -->
+  <div class="card" style="margin-top:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:700;color:#c00">🚨 緊急待ちリスト</div>
+      <button class="btn btn-sm" onclick="printUrgentWait()" style="font-size:11px">🖨 印刷</button>
+    </div>
+    <!-- 登録フォーム -->
+    <div style="background:#fff8f8;border:1px solid #f5c0c0;border-radius:6px;padding:10px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:#800;margin-bottom:8px">新規登録</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+        <div>
+          <div style="font-size:10px;color:#666;margin-bottom:2px">耳標下5桁</div>
+          <input id="uw-tag" type="text" maxlength="5" placeholder="12345" style="width:80px;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-size:13px"
+            oninput="uwAutoFill()" onkeydown="if(event.key==='Enter')addUrgentWait()">
+        </div>
+        <div>
+          <div style="font-size:10px;color:#666;margin-bottom:2px">個体情報</div>
+          <div id="uw-info" style="font-size:11px;color:#555;min-width:120px;padding:5px 7px;background:#fff;border:1px solid #e0e0e0;border-radius:4px;min-height:26px"></div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#666;margin-bottom:2px">待機理由</div>
+          <select id="uw-reason" style="padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-size:12px" onchange="uwToggleDate()">
+            <option value="枠待ち">屠畜場 枠待ち</option>
+            <option value="休薬期間">休薬期間中</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div>
+          <div id="uw-date-label" style="font-size:10px;color:#666;margin-bottom:2px">出荷予定日</div>
+          <input id="uw-date" type="date" style="padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-size:12px" oninput="uwCalcDays()">
+          <span id="uw-days-info" style="font-size:11px;color:#c00;margin-left:4px"></span>
+        </div>
+        <div style="flex:1;min-width:120px">
+          <div style="font-size:10px;color:#666;margin-bottom:2px">メモ（薬剤名・日程等）</div>
+          <input id="uw-memo" type="text" placeholder="例: ザクトラン 7/1まで" style="width:100%;padding:5px 7px;border:1px solid #ccc;border-radius:4px;font-size:12px" onkeydown="if(event.key==='Enter')addUrgentWait()">
+        </div>
+        <button class="btn btn-sm btn-r" onclick="addUrgentWait()" style="white-space:nowrap">＋ 登録</button>
+      </div>
+    </div>
+    <!-- リスト表示 -->
+    <div id="uw-list"></div>
+  </div>
+
 </div></div>
 
 
@@ -787,7 +858,7 @@ let BARNS=[
   {id:'10',name:'10号舎',penCount:12, penCap:6},
   {id:'11',name:'11号舎',penCount:12, penCap:6},
   {id:'12',name:'12号舎',penCount:12, penCap:6},
-  {id:'new',name:'新牛舎',penCount:24, penCap:6},
+  {id:'new',name:'新牛舎',penCount:24, penCap:5},
   {id:'M1', name:'M-1', penCount:25, penCap:6},
   {id:'M2', name:'M-2', penCount:25, penCap:6},
   {id:'M3', name:'M-3', penCount:25, penCap:6},
@@ -825,7 +896,7 @@ const DEFAULT_BARNS=[
   {id:'4',name:'4号舎',penCount:24,penCap:6},{id:'5',name:'5号舎',penCount:24,penCap:6},{id:'6',name:'6号舎',penCount:24,penCap:6},
   {id:'7',name:'7号舎',penCount:24,penCap:6},{id:'8',name:'8号舎',penCount:24,penCap:6},{id:'9',name:'9号舎',penCount:12,penCap:6},
   {id:'10',name:'10号舎',penCount:12,penCap:6},{id:'11',name:'11号舎',penCount:12,penCap:6},{id:'12',name:'12号舎',penCount:12,penCap:6},
-  {id:'new',name:'新牛舎',penCount:24,penCap:6},
+  {id:'new',name:'新牛舎',penCount:24,penCap:5},
   {id:'M1',name:'M-1',penCount:25,penCap:6},{id:'M2',name:'M-2',penCount:25,penCap:6},{id:'M3',name:'M-3',penCount:25,penCap:6},
   {id:'M4',name:'M-4',penCount:25,penCap:6},{id:'M5',name:'M-5',penCount:25,penCap:6},{id:'M6',name:'M-6',penCount:25,penCap:6},
   {id:'M7',name:'M-7',penCount:25,penCap:6},{id:'M8',name:'M-8',penCount:25,penCap:6},
@@ -2611,6 +2682,310 @@ function mkBar(pct, color){
   </div>`;
 }
 
+function exportWeeklyReport(){
+  const catData=window._lastWeeklyCatData;
+  const label=window._lastWeeklyLabel||'';
+  const newCap=window._lastNewBarnCapacity||120;
+  if(!catData){alert('先にレポートを更新してください。');return;}
+  if(typeof XLSX==='undefined'){alert('SheetJSが読み込まれていません。');return;}
+
+  const distStr=(arr,mo=false)=>{
+    if(!arr||!arr.length) return '';
+    const buckets={};
+    arr.forEach(v=>{
+      const lbl=mo?(v<=1?'〜1m':v<=2?'2m':v<=3?'3m':v<=6?'4〜6m':v<=9?'7〜9m':'10m〜')
+                  :(v<=3?'〜3m':v<=6?'4〜6m':v<=9?'7〜9m':v<=12?'10〜12m':v<=18?'13〜18m':v<=24?'19〜24m':'25m〜');
+      buckets[lbl]=(buckets[lbl]||0)+1;
+    });
+    return Object.entries(buckets).map(([k,n])=>k+':'+n+'頭').join(' ');
+  };
+
+  // 今週ラベル（短縮）
+  const shortLabel=label.replace(/2026年?/g,'').replace(/年/g,'/').replace(/月/g,'/').replace(/日/g,'').replace(/\s/g,'');
+
+  // catData: [黒毛自家産, 黒毛外部導入, 経産自家産, 経産外部導入]
+  const [ks,ki,es,ei]=catData;
+
+  // ── 既存ファイルに追記 or 新規 ──
+  const choice=confirm('既存の週次レポートExcelに今週を追記しますか？\n\n【OK】→ 既存ファイルを選択して追記\n【キャンセル】→ 今週分のみ新規作成');
+  if(!choice){
+    _doWeeklyBuild(null, shortLabel, ks, ki, es, ei, newCap, distStr);
+    return;
+  }
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='.xlsx'; inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.onchange=(e)=>{
+    const file=e.target.files[0];
+    if(!file){document.body.removeChild(inp);return;}
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:'array'});
+        _doWeeklyBuild(wb, shortLabel, ks, ki, es, ei, newCap, distStr);
+      }catch(err){alert('読み込みエラー: '+err.message);}
+      document.body.removeChild(inp);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+  inp.click();
+}
+
+function _doWeeklyBuild(existingWb, weekLabel, ks, ki, es, ei, newCap, distStr){
+  const wb=existingWb||XLSX.utils.book_new();
+
+  // ── 共通スタイル定義 ──
+  const ST={
+    hdr :{fill:{fgColor:{rgb:'1A4731'}},font:{name:'Meiryo UI',sz:10,bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:'center',wrapText:true}},
+    hdr2:{fill:{fgColor:{rgb:'2A6B46'}},font:{name:'Meiryo UI',sz:10,bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:'center',wrapText:true}},
+    cat :{fill:{fgColor:{rgb:'E8F5EE'}},font:{name:'Meiryo UI',sz:10,bold:true},alignment:{wrapText:true}},
+    item:{fill:{fgColor:{rgb:'F8F7F2'}},font:{name:'Meiryo UI',sz:10},alignment:{wrapText:true}},
+    num :{font:{name:'Meiryo UI',sz:10},alignment:{horizontal:'center'}},
+    pct :{font:{name:'Meiryo UI',sz:10,color:{rgb:'1A6B40'}},alignment:{horizontal:'center'}},
+    warn:{font:{name:'Meiryo UI',sz:10,bold:true,color:{rgb:'C00000'}},alignment:{horizontal:'center'}},
+    mid :{font:{name:'Meiryo UI',sz:10,bold:true,color:{rgb:'7A5C00'}},alignment:{horizontal:'center'}},
+    new1:{fill:{fgColor:{rgb:'FFF2CC'}},font:{name:'Meiryo UI',sz:10},alignment:{horizontal:'center'}},
+    new2:{fill:{fgColor:{rgb:'FCE5CD'}},font:{name:'Meiryo UI',sz:10,bold:true,color:{rgb:'7A5C00'}},alignment:{horizontal:'center'}},
+    new3:{fill:{fgColor:{rgb:'F4CCCC'}},font:{name:'Meiryo UI',sz:10,bold:true,color:{rgb:'C00000'}},alignment:{horizontal:'center'}},
+  };
+  const cell=(v,s,t)=>({v,s,t:t||(typeof v==='number'?'n':'s')});
+  const pctSt=(v,hi=30,mid=15)=>v>=hi?ST.warn:v>=mid?ST.mid:ST.pct;
+
+  // ── シート作成ヘルパー ──
+  function makeOrAppendSheet(wb, sheetName, buildFn){
+    const aoa=[];
+    const merges=[];
+    const colWidths=[];
+    buildFn(aoa, merges, colWidths);
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    // セルスタイルをaoaオブジェクトから適用
+    aoa.forEach((row,ri)=>row.forEach((cell,ci)=>{
+      if(cell&&typeof cell==='object'&&cell.s){
+        const addr=XLSX.utils.encode_cell({r:ri,c:ci});
+        if(!ws[addr]) ws[addr]={v:cell.v,t:cell.t||'s'};
+        ws[addr].s=cell.s;
+        ws[addr].v=cell.v;
+        ws[addr].t=cell.t||(typeof cell.v==='number'?'n':'s');
+      }
+    }));
+    if(merges.length) ws['!merges']=merges;
+    if(colWidths.length) ws['!cols']=colWidths;
+    if(wb.SheetNames.includes(sheetName)){
+      wb.Sheets[sheetName]=ws;
+    } else {
+      XLSX.utils.book_append_sheet(wb,ws,sheetName);
+    }
+  }
+
+  // ──────────────────────────────
+  // シート1: 黒毛
+  // ──────────────────────────────
+  makeOrAppendSheet(wb,'黒毛',(aoa,merges,cols)=>{
+    // 既存シートがあれば読み込んで週列を追加
+    let base=null;
+    if(existingWb&&existingWb.SheetNames.includes('黒毛')){
+      base=XLSX.utils.sheet_to_json(existingWb.Sheets['黒毛'],{header:1,defval:''});
+    }
+
+    // 行定義: [カテゴリ, 項目, ks値fn, ki値fn]
+    const ROWS=[
+      ['黒毛自家産','在舎頭数',    d=>d.total,    d=>d.total],
+      ['黒毛自家産','治療頭数',    d=>d.wTreatedCnt,d=>d.wTreatedCnt],
+      ['黒毛自家産','治療割合(%)', d=>d.wTreatPct,d=>d.wTreatPct],
+      ['黒毛自家産','新牛舎在舎',  d=>d.newTotal, d=>d.newTotal],
+      ['黒毛自家産','新牛舎導入(7日)',d=>d.newIntroCnt,d=>d.newIntroCnt],
+      ['黒毛自家産','新牛舎治療頭数',d=>d.newTreatCnt,d=>d.newTreatCnt],
+      ['黒毛自家産','新牛舎治療割合(%)',d=>d.newTreatPct,d=>d.newTreatPct],
+      ['黒毛自家産','ルーメン頭数',d=>d.ruCnt,    d=>d.ruCnt],
+      ['黒毛自家産','ルーメン割合(%)',d=>d.ruPct,  d=>d.ruPct],
+      ['黒毛自家産','ルーメン月齢',d=>distStr(d.ruAges),d=>distStr(d.ruAges)],
+      ['黒毛自家産','飲ませ頭数',  d=>d.noCnt,    d=>d.noCnt],
+      ['黒毛自家産','飲ませ割合(%)',d=>d.noPct,   d=>d.noPct],
+      ['黒毛自家産','飲ませ月齢',  d=>distStr(d.noAges),d=>distStr(d.noAges)],
+      ['黒毛自家産','餌食いB',     d=>d.feedB,    d=>d.feedB],
+      ['黒毛自家産','餌食いC',     d=>d.feedC,    d=>d.feedC],
+      ['黒毛自家産','餌食いBC率(%)',d=>d.feedBCPct,d=>d.feedBCPct],
+      ['黒毛外部導入','在舎頭数',   d=>d.total,   d=>d.total],
+      ['黒毛外部導入','治療頭数',   d=>d.wTreatedCnt,d=>d.wTreatedCnt],
+      ['黒毛外部導入','治療割合(%)',d=>d.wTreatPct,d=>d.wTreatPct],
+      ['黒毛外部導入','新牛舎在舎', d=>d.newTotal, d=>d.newTotal],
+      ['黒毛外部導入','新牛舎導入(7日)',d=>d.newIntroCnt,d=>d.newIntroCnt],
+      ['黒毛外部導入','新牛舎治療頭数',d=>d.newTreatCnt,d=>d.newTreatCnt],
+      ['黒毛外部導入','新牛舎治療割合(%)',d=>d.newTreatPct,d=>d.newTreatPct],
+      ['黒毛外部導入','ルーメン頭数',d=>d.ruCnt,  d=>d.ruCnt],
+      ['黒毛外部導入','ルーメン割合(%)',d=>d.ruPct,d=>d.ruPct],
+      ['黒毛外部導入','ルーメン月齢',d=>distStr(d.ruAges),d=>distStr(d.ruAges)],
+      ['黒毛外部導入','飲ませ頭数', d=>d.noCnt,   d=>d.noCnt],
+      ['黒毛外部導入','飲ませ割合(%)',d=>d.noPct, d=>d.noPct],
+      ['黒毛外部導入','飲ませ月齢', d=>distStr(d.noAges),d=>distStr(d.noAges)],
+      ['黒毛外部導入','餌食いB',    d=>d.feedB,   d=>d.feedB],
+      ['黒毛外部導入','餌食いC',    d=>d.feedC,   d=>d.feedC],
+      ['黒毛外部導入','餌食いBC率(%)',d=>d.feedBCPct,d=>d.feedBCPct],
+    ];
+
+    if(base){
+      // 追記モード: 既存aoaに列追加
+      base[0].push(weekLabel);
+      ROWS.forEach(([cat,item,fks,fki],i)=>{
+        const ri=i+1;
+        if(!base[ri]) base[ri]=[cat,item];
+        const src=cat.includes('自家産')?ks:ki;
+        const fn=cat.includes('自家産')?fks:fki;
+        base[ri].push(src?fn(src):'');
+      });
+      base.forEach(r=>aoa.push(r));
+    } else {
+      // 新規
+      aoa.push([cell('区分',ST.hdr),cell('調査項目',ST.hdr),cell(weekLabel,ST.hdr2)]);
+      ROWS.forEach(([cat,item,fks,fki])=>{
+        const src=cat.includes('自家産')?ks:ki;
+        const fn=cat.includes('自家産')?fks:fki;
+        const v=src?fn(src):'';
+        const isCat=cat.includes('自家産')&&item==='在舎頭数'||cat.includes('外部導入')&&item==='在舎頭数';
+        aoa.push([cell(cat,ST.cat),cell(item,ST.item),cell(v,typeof v==='number'?ST.num:ST.item)]);
+      });
+    }
+    cols.push({wch:14},{wch:16},{wch:10});
+  });
+
+  // ──────────────────────────────
+  // シート2: 経産
+  // ──────────────────────────────
+  makeOrAppendSheet(wb,'経産',(aoa,merges,cols)=>{
+    let base=null;
+    if(existingWb&&existingWb.SheetNames.includes('経産')){
+      base=XLSX.utils.sheet_to_json(existingWb.Sheets['経産'],{header:1,defval:''});
+    }
+    const ROWS=[
+      ['経産自家産','在舎頭数',    d=>d.total,     d=>d.total],
+      ['経産自家産','治療頭数',    d=>d.wTreatedCnt,d=>d.wTreatedCnt],
+      ['経産自家産','治療割合(%)', d=>d.wTreatPct, d=>d.wTreatPct],
+      ['経産自家産','新牛舎在舎',  d=>d.newTotal,  d=>d.newTotal],
+      ['経産自家産','新牛舎導入(7日)',d=>d.newIntroCnt,d=>d.newIntroCnt],
+      ['経産自家産','新牛舎治療頭数',d=>d.newTreatCnt,d=>d.newTreatCnt],
+      ['経産自家産','新牛舎治療割合(%)',d=>d.newTreatPct,d=>d.newTreatPct],
+      ['経産自家産','ルーメン頭数', d=>d.ruCnt,    d=>d.ruCnt],
+      ['経産自家産','ルーメン割合(%)',d=>d.ruPct,  d=>d.ruPct],
+      ['経産自家産','ルーメン月齢', d=>distStr(d.ruAges,true),d=>distStr(d.ruAges,true)],
+      ['経産自家産','飲ませ頭数',   d=>d.noCnt,   d=>d.noCnt],
+      ['経産自家産','飲ませ割合(%)',d=>d.noPct,   d=>d.noPct],
+      ['経産自家産','飲ませ月齢',   d=>distStr(d.noAges,true),d=>distStr(d.noAges,true)],
+      ['経産自家産','餌食いB',      d=>d.feedB,   d=>d.feedB],
+      ['経産自家産','餌食いC',      d=>d.feedC,   d=>d.feedC],
+      ['経産自家産','餌食いBC率(%)',d=>d.feedBCPct,d=>d.feedBCPct],
+      ['経産外部導入','在舎頭数',   d=>d.total,   d=>d.total],
+      ['経産外部導入','治療頭数',   d=>d.wTreatedCnt,d=>d.wTreatedCnt],
+      ['経産外部導入','治療割合(%)',d=>d.wTreatPct,d=>d.wTreatPct],
+      ['経産外部導入','新牛舎在舎', d=>d.newTotal, d=>d.newTotal],
+      ['経産外部導入','新牛舎導入(7日)',d=>d.newIntroCnt,d=>d.newIntroCnt],
+      ['経産外部導入','新牛舎治療頭数',d=>d.newTreatCnt,d=>d.newTreatCnt],
+      ['経産外部導入','新牛舎治療割合(%)',d=>d.newTreatPct,d=>d.newTreatPct],
+      ['経産外部導入','ルーメン頭数',d=>d.ruCnt,  d=>d.ruCnt],
+      ['経産外部導入','ルーメン割合(%)',d=>d.ruPct,d=>d.ruPct],
+      ['経産外部導入','ルーメン月齢',d=>distStr(d.ruAges,true),d=>distStr(d.ruAges,true)],
+      ['経産外部導入','飲ませ頭数', d=>d.noCnt,   d=>d.noCnt],
+      ['経産外部導入','飲ませ割合(%)',d=>d.noPct, d=>d.noPct],
+      ['経産外部導入','飲ませ月齢', d=>distStr(d.noAges,true),d=>distStr(d.noAges,true)],
+      ['経産外部導入','餌食いB',    d=>d.feedB,   d=>d.feedB],
+      ['経産外部導入','餌食いC',    d=>d.feedC,   d=>d.feedC],
+      ['経産外部導入','餌食いBC率(%)',d=>d.feedBCPct,d=>d.feedBCPct],
+    ];
+    if(base){
+      base[0].push(weekLabel);
+      ROWS.forEach(([cat,item,fes,fei],i)=>{
+        const ri=i+1;
+        if(!base[ri]) base[ri]=[cat,item];
+        const src=cat.includes('自家産')?es:ei;
+        const fn=cat.includes('自家産')?fes:fei;
+        base[ri].push(src?fn(src):'');
+      });
+      base.forEach(r=>aoa.push(r));
+    } else {
+      aoa.push([cell('区分',ST.hdr),cell('調査項目',ST.hdr),cell(weekLabel,ST.hdr2)]);
+      ROWS.forEach(([cat,item,fes,fei])=>{
+        const src=cat.includes('自家産')?es:ei;
+        const fn=cat.includes('自家産')?fes:fei;
+        const v=src?fn(src):'';
+        aoa.push([cell(cat,ST.cat),cell(item,ST.item),cell(v,typeof v==='number'?ST.num:ST.item)]);
+      });
+    }
+    cols.push({wch:14},{wch:16},{wch:10});
+  });
+
+  // ──────────────────────────────
+  // シート3: 新牛舎
+  // ──────────────────────────────
+  makeOrAppendSheet(wb,'新牛舎',(aoa,merges,cols)=>{
+    let base=null;
+    if(existingWb&&existingWb.SheetNames.includes('新牛舎')){
+      base=XLSX.utils.sheet_to_json(existingWb.Sheets['新牛舎'],{header:1,defval:''});
+    }
+
+    // 新牛舎の全合計
+    const totalNew=(ks.newTotal||0)+(ki.newTotal||0)+(es.newTotal||0)+(ei.newTotal||0);
+    const usePct=newCap?Math.round(totalNew/newCap*100):0;
+    const vacancies=newCap-totalNew;
+    const totalNewTreat=(ks.newTreatCnt||0)+(ki.newTreatCnt||0)+(es.newTreatCnt||0)+(ei.newTreatCnt||0);
+    const totalNewIntro=(ks.newIntroCnt||0)+(ki.newIntroCnt||0)+(es.newIntroCnt||0)+(ei.newIntroCnt||0);
+    const totalNewTreatPct=totalNew?Math.round(totalNewTreat/totalNew*100):0;
+
+    const ROWS=[
+      ['','最大収容頭数(頭)',   newCap,'','','',''],
+      ['全体','在舎合計(頭)',   totalNew,'','','',''],
+      ['全体','使用率(%)',      usePct,'','','',''],
+      ['全体','空き(頭)',       vacancies,'','','',''],
+      ['全体','7日以内導入(頭)',totalNewIntro,'','','',''],
+      ['全体','治療頭数(頭)',   totalNewTreat,'','','',''],
+      ['全体','治療割合(%)',    totalNewTreatPct,'','','',''],
+      ['---','---','---','','','',''],
+      ['黒毛自家産','在舎(頭)',  ks.newTotal||0,'','','',''],
+      ['黒毛自家産','容量比(%)', newCap?Math.round((ks.newTotal||0)/newCap*100):0,'','','',''],
+      ['黒毛自家産','7日以内導入(頭)',ks.newIntroCnt||0,'','','',''],
+      ['黒毛自家産','治療頭数(頭)',ks.newTreatCnt||0,'','','',''],
+      ['黒毛自家産','治療割合(%)',ks.newTreatPct||0,'','','',''],
+      ['黒毛外部導入','在舎(頭)', ki.newTotal||0,'','','',''],
+      ['黒毛外部導入','容量比(%)',newCap?Math.round((ki.newTotal||0)/newCap*100):0,'','','',''],
+      ['黒毛外部導入','7日以内導入(頭)',ki.newIntroCnt||0,'','','',''],
+      ['黒毛外部導入','治療頭数(頭)',ki.newTreatCnt||0,'','','',''],
+      ['黒毛外部導入','治療割合(%)',ki.newTreatPct||0,'','','',''],
+      ['経産自家産','在舎(頭)',  es.newTotal||0,'','','',''],
+      ['経産自家産','容量比(%)', newCap?Math.round((es.newTotal||0)/newCap*100):0,'','','',''],
+      ['経産自家産','7日以内導入(頭)',es.newIntroCnt||0,'','','',''],
+      ['経産自家産','治療頭数(頭)',es.newTreatCnt||0,'','','',''],
+      ['経産自家産','治療割合(%)',es.newTreatPct||0,'','','',''],
+      ['経産外部導入','在舎(頭)', ei.newTotal||0,'','','',''],
+      ['経産外部導入','容量比(%)',newCap?Math.round((ei.newTotal||0)/newCap*100):0,'','','',''],
+      ['経産外部導入','7日以内導入(頭)',ei.newIntroCnt||0,'','','',''],
+      ['経産外部導入','治療頭数(頭)',ei.newTreatCnt||0,'','','',''],
+      ['経産外部導入','治療割合(%)',ei.newTreatPct||0,'','','',''],
+    ];
+
+    if(base){
+      // ヘッダー行に週ラベル追加
+      if(base[0]) base[0].push(weekLabel);
+      ROWS.forEach(([cat,item,v],i)=>{
+        const ri=i+1;
+        if(!base[ri]) base[ri]=[cat,item];
+        base[ri].push(v);
+      });
+      base.forEach(r=>aoa.push(r));
+    } else {
+      aoa.push([cell('区分',ST.hdr),cell('項目',ST.hdr),cell(weekLabel,ST.hdr2)]);
+      ROWS.forEach(([cat,item,v])=>{
+        const isSep=cat==='---';
+        const isTotal=cat==='全体'||cat==='';
+        const catSt=isSep?ST.item:isTotal?{fill:{fgColor:{rgb:'D9EAD3'}},font:{name:'Meiryo UI',sz:10,bold:true}}:ST.cat;
+        const valSt=isSep?ST.item:typeof v==='number'?ST.num:ST.item;
+        aoa.push([cell(isSep?'':cat,catSt),cell(isSep?'':item,catSt),cell(isSep?'':v,valSt)]);
+      });
+    }
+    cols.push({wch:14},{wch:18},{wch:10});
+  });
+
+  XLSX.writeFile(wb,'週次治療傾向_累積.xlsx');
+}
+
+
 function buildReport(){
   const now=new Date();
   const dateStr=now.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'});
@@ -2728,13 +3103,208 @@ function buildReport(){
         <div style="font-size:12px;color:#666;margin-top:3px">在舎: ${tags.join(', ')||'なし'}</div></div>`;
     }
   });
-  const keisan2m=activeCattle.filter(c=>c.sex==='経産'&&introMonths(c)<=2);
-  if(keisan2m.length){
-    alertHtml+=`<div class="rpt-alert warn">🐄 <strong>経産 導入後2ヶ月以内: ${keisan2m.length}頭</strong>（要注意期間）
-      <div style="font-size:12px;color:#666;margin-top:3px">${keisan2m.map(c=>{const b=BARNS.find(x=>x.id===c.barnId)||{name:c.barnId};return String(c.fullId).slice(-5)+'('+b.name+c.pen+'部屋)';}).join(', ')}</div></div>`;
-  }
   if(!alertHtml) alertHtml='<div class="rpt-alert ok">✓ 現時点で特記すべきアラートはありません</div>';
   html+=`<div class="rpt-section"><h3>🚨 要注意アラート</h3>${alertHtml}</div>`;
+
+  // ══════ セクション2.5: 直近1週間 治療傾向テーブル ══════
+  (()=>{
+    const w7=new Date(now); w7.setDate(w7.getDate()-7);
+    // 新牛舎判定: barnIdが'new' OR 牛舎名に'新牛舎'を含む
+    const isNewBarn=(c)=>{
+      if(!c) return false;
+      if(c.barnId==='new') return true;
+      const b=BARNS.find(x=>x.id===c.barnId);
+      return b && b.name && b.name.includes('新牛舎');
+    };
+
+    // 4カテゴリ定義
+    const cats=[
+      {key:'k_self',  label:'黒毛\n自家産',  filter:c=>c.sex!=='経産'&&(c.breed||'K')!=='F1'&&(c.origin||'導入')==='自家産'},
+      {key:'k_imp',   label:'黒毛\n外部導入', filter:c=>c.sex!=='経産'&&(c.breed||'K')!=='F1'&&(c.origin||'導入')!=='自家産'},
+      {key:'kei_self',label:'経産\n自家産',   filter:c=>c.sex==='経産'&&(c.origin||'導入')==='自家産', keisan:true},
+      {key:'kei_imp', label:'経産\n外部導入', filter:c=>c.sex==='経産'&&(c.origin||'導入')!=='自家産', keisan:true},
+    ];
+
+    // 治療データ直近7日（様子見・死亡・緊急除く）
+    const wTreat=TREAT_DATA.filter(t=>t.date>=w7&&(!t.eventType||t.eventType==='treat'));
+
+    // 月齢分布をまとめるヘルパー
+    const distStr=(arr)=>{
+      if(!arr.length) return '—';
+      const buckets={};
+      arr.forEach(v=>{
+        const lbl=v<=3?'〜3m':v<=6?'4〜6m':v<=9?'7〜9m':v<=12?'10〜12m':v<=18?'13〜18m':v<=24?'19〜24m':'25m〜';
+        buckets[lbl]=(buckets[lbl]||0)+1;
+      });
+      return Object.entries(buckets).map(([k,n])=>k+':'+n+'頭').join('／');
+    };
+    const distStrMo=(arr)=>{ // 経産：導入後月数
+      if(!arr.length) return '—';
+      const buckets={};
+      arr.forEach(v=>{
+        const lbl=v<=1?'〜1m':v<=2?'2m':v<=3?'3m':v<=6?'4〜6m':v<=9?'7〜9m':'10m〜';
+        buckets[lbl]=(buckets[lbl]||0)+1;
+      });
+      return Object.entries(buckets).map(([k,n])=>k+':'+n+'頭').join('／');
+    };
+
+    // 餌食いB/C計算（直近7日の記録で最新がB/C）
+    const feedBCByTag=(tag5)=>{
+      const cow=Object.values(cattle).find(c=>c&&String(c.fullId).slice(-5)===tag5);
+      if(!cow||!cow.feedHist||!cow.feedHist.length) return null;
+      const recent=cow.feedHist.filter(h=>{const d=new Date(h.date.replace(/\//g,'-'));return!isNaN(d)&&d>=w7;});
+      if(!recent.length) return null;
+      return recent[recent.length-1].grade;
+    };
+
+    // 導入日が7日以内かを判定（台帳のintroDate）
+    const isNewIntro=(c)=>{
+      if(!c.introDate) return false;
+      const d=new Date(c.introDate);
+      return !isNaN(d) && d>=w7;
+    };
+
+    // 新牛舎の最大収容頭数を BARNS 定義から計算
+    const newBarnDef=BARNS.find(b=>b.id==='new'||b.name==='新牛舎');
+    const newBarnCapacity=newBarnDef?(newBarnDef.penCount*newBarnDef.penCap):0;
+    // 新牛舎の全在籍（品種問わず）
+    const allNewCow=activeCattle.filter(c=>isNewBarn(c));
+    const allNewTotal=allNewCow.length;
+    const newUsePct=newBarnCapacity?Math.round(allNewTotal/newBarnCapacity*100):0;
+    const newUsePctCls=newUsePct>=80?'week-num-hi':newUsePct>=60?'week-num-mid':'';
+    window._lastNewBarnCapacity=newBarnCapacity;
+
+    // カテゴリ行生成（データも返して出力用に使う）
+    const catData=cats.map(cat=>{
+      const grpCattle=activeCattle.filter(cat.filter);
+      const grpTags=new Set(grpCattle.map(c=>String(c.fullId).slice(-5)));
+      const total=grpCattle.length;
+
+      // 新牛舎在舎（barnIdまたは牛舎名で判定）
+      const newCow=grpCattle.filter(c=>isNewBarn(c));
+      const newTotal=newCow.length;
+      // この品種の新牛舎占有率（最大容量に対して）
+      const newOccupyPct=newBarnCapacity?Math.round(newTotal/newBarnCapacity*100):0;
+
+      // 新牛舎への7日以内導入
+      const newIntroCnt=newCow.filter(c=>isNewIntro(c)).length;
+
+      // 直近7日治療
+      const wGrp=wTreat.filter(t=>grpTags.has(t.tag5));
+      const wTreatedSet=new Set(wGrp.map(t=>t.tag5));
+      const wTreatedCnt=wTreatedSet.size;
+      const wTreatPct=total?Math.round(wTreatedCnt/total*100):0;
+
+      // 新牛舎での治療
+      const newTags=new Set(newCow.map(c=>String(c.fullId).slice(-5)));
+      const newTreatSet=new Set(wGrp.filter(t=>newTags.has(t.tag5)).map(t=>t.tag5));
+      const newTreatCnt=newTreatSet.size;
+      const newTreatPct=newTotal?Math.round(newTreatCnt/newTotal*100):0;
+
+      // ルーメンファイブ
+      const ruWk=wGrp.filter(t=>/ルーメン/i.test(t.method||''));
+      const ruSet=new Set(ruWk.map(t=>t.tag5));
+      const ruCnt=ruSet.size;
+      const ruPct=total?Math.round(ruCnt/total*100):0;
+      const ruAges=[];
+      ruSet.forEach(tag5=>{
+        const cow=grpCattle.find(c=>String(c.fullId).slice(-5)===tag5);
+        if(cow) ruAges.push(cat.keisan?introMonths(cow):(cow.age||0));
+      });
+
+      // 飲ませ
+      const noWk=wGrp.filter(t=>/飲ませ/i.test(t.method||''));
+      const noSet=new Set(noWk.map(t=>t.tag5));
+      const noCnt=noSet.size;
+      const noPct=total?Math.round(noCnt/total*100):0;
+      const noAges=[];
+      noSet.forEach(tag5=>{
+        const cow=grpCattle.find(c=>String(c.fullId).slice(-5)===tag5);
+        if(cow) noAges.push(cat.keisan?introMonths(cow):(cow.age||0));
+      });
+
+      // 餌食いB/C
+      let feedB=0,feedC=0,feedN=0;
+      grpCattle.forEach(c=>{
+        const g=feedBCByTag(String(c.fullId).slice(-5));
+        if(g==='B') feedB++;
+        else if(g==='C') feedC++;
+        else if(g) feedN++;
+      });
+      const feedTotal=feedB+feedC+feedN;
+      const feedBCPct=feedTotal?Math.round((feedB+feedC)/feedTotal*100):null;
+
+      return {cat,total,wTreatedCnt,wTreatPct,newTotal,newOccupyPct,newIntroCnt,newTreatCnt,newTreatPct,
+              ruCnt,ruPct,ruAges,noCnt,noPct,noAges,feedB,feedC,feedN,feedTotal,feedBCPct};
+    });
+
+    const cn=(v,pct,hi=30,mid=15)=>{
+      const cls=pct>=hi?'week-num-hi':pct>=mid?'week-num-mid':'';
+      return `<span class="${cls}">${v}</span>`;
+    };
+
+    const rows=catData.map(d=>{
+      const {cat,total,wTreatedCnt,wTreatPct,newTotal,newOccupyPct,newIntroCnt,newTreatCnt,newTreatPct,
+             ruCnt,ruPct,ruAges,noCnt,noPct,noAges,feedB,feedC,feedN,feedTotal,feedBCPct}=d;
+      const distFn=cat.keisan?distStrMo:distStr;
+      const occupyBar=newTotal?`<div style="background:#f0efe8;border-radius:3px;height:5px;margin-top:3px"><div style="background:${newOccupyPct>=80?'#E24B4A':newOccupyPct>=60?'#EF9F27':'#1D9E75'};height:100%;width:${Math.min(100,newOccupyPct)}%;border-radius:3px"></div></div>`:'';
+      return `<tr>
+        <td class="lc">${cat.label.replace('\n','<br>')}</td>
+        <td>${total?total+'頭':'—'}</td>
+        <td>${total?cn(wTreatedCnt,wTreatPct)+'頭'+`<br><span class="pct">${wTreatPct}%</span>`:'—'}</td>
+        <td>${newTotal?newTotal+'頭<br><span class="pct">容量比 '+newOccupyPct+'%</span>'+occupyBar:'—'}</td>
+        <td>${newIntroCnt?`<span class="week-num-mid">${newIntroCnt}頭</span>`:'—'}</td>
+        <td>${newTotal?cn(newTreatCnt,newTreatPct,50,25)+'頭'+`<br><span class="pct">${newTreatPct}%</span>`:'—'}</td>
+        <td>${total?cn(ruCnt,ruPct,20,10)+'頭'+`<br><span class="pct">${ruPct}%</span>`+(ruAges.length?`<div class="dist">${distFn(ruAges)}</div>`:''): '—'}</td>
+        <td>${total?cn(noCnt,noPct,20,10)+'頭'+`<br><span class="pct">${noPct}%</span>`+(noAges.length?`<div class="dist">${distFn(noAges)}</div>`:''): '—'}</td>
+        <td>${feedTotal?`B:${feedB} C:${feedC}<br><span class="pct">BC率 ${feedBCPct}%</span>`:'記録なし'}</td>
+      </tr>`;
+    }).join('');
+
+    const dateLabel=w7.toLocaleDateString('ja-JP')+'〜'+now.toLocaleDateString('ja-JP');
+    // 新牛舎使用率バー
+    const capBar=newBarnCapacity?`<div style="display:inline-block;vertical-align:middle;width:120px;background:#f0efe8;border-radius:4px;height:10px;margin-left:8px;overflow:hidden"><div style="background:${newUsePct>=80?'#E24B4A':newUsePct>=60?'#EF9F27':'#1D9E75'};height:100%;width:${Math.min(100,newUsePct)}%;border-radius:4px;transition:width .3s"></div></div>`:'';
+
+    html+=`<div class="rpt-section">
+      <h3>📅 直近1週間 治療傾向サマリー
+        <button onclick="exportWeeklyReport()" style="float:right;font-size:11px;padding:3px 10px;background:#1D9E75;color:#fff;border:none;border-radius:5px;cursor:pointer">📥 Excelで出力</button>
+      </h3>
+      <div style="font-size:11px;color:#888;margin-bottom:8px">集計期間: ${dateLabel}　※治療割合＝直近7日に治療した頭数÷在舎頭数</div>
+      ${newBarnCapacity?`<div style="background:#f5f4ef;border:1px solid #e0dfd8;border-radius:8px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:16px">
+        <div style="font-size:12px;font-weight:600;color:#333">🏚 新牛舎 使用状況</div>
+        <div style="font-size:13px;font-weight:700"><span class="${newUsePctCls}">${allNewTotal}頭</span><span style="font-size:11px;color:#888;font-weight:400"> / 最大${newBarnCapacity}頭</span></div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:13px;font-weight:700;color:${newUsePct>=80?'#c00':newUsePct>=60?'#7a5c00':'#1a6b40'}">${newUsePct}%</span>
+          ${capBar}
+        </div>
+        <div style="font-size:11px;color:#888">（全品種合計　空き: ${newBarnCapacity-allNewTotal}頭）</div>
+      </div>`:''}
+      <div style="overflow-x:auto">
+      <table class="week-tbl">
+        <thead>
+          <tr>
+            <th class="lh" rowspan="2">区分</th>
+            <th rowspan="2">在舎<br>頭数</th>
+            <th rowspan="2">治療頭数<br><span style="font-size:9px;font-weight:400">（割合）</span></th>
+            <th colspan="3" style="border-bottom:1px solid #2a8a50">新牛舎</th>
+            <th rowspan="2">ルーメンファイブ<br>頭数 / 割合<br><span style="font-size:9px;font-weight:400">月齢分布</span></th>
+            <th rowspan="2">飲ませ<br>頭数 / 割合<br><span style="font-size:9px;font-weight:400">月齢分布</span></th>
+            <th rowspan="2">餌食い記録<br>B / C 頭数<br>（7日以内）</th>
+          </tr>
+          <tr>
+            <th>在舎<br><span style="font-size:9px;font-weight:400">（容量比）</span></th><th>7日以内<br>導入</th><th>治療頭数<br>（割合）</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </div>
+      <div style="font-size:10px;color:#aaa;margin-top:6px">新牛舎: 牛舎名「新牛舎」（弱い牛が集まる牛舎）　容量比=各品種在舎÷新牛舎最大容量（${newBarnCapacity}頭）　ルーメン=治療入力に「ルーメン」を含む記録　飲ませ=「飲ませ」を含む記録</div>
+    </div>`;
+
+    // 出力用にデータを保存
+    window._lastWeeklyCatData=catData;
+    window._lastWeeklyLabel=dateLabel;
+  })();
 
   // ══════ セクション3: 品種別詳細分析 ══════
   const breedDefs=[
@@ -3648,5 +4218,209 @@ function renderShipPage(){
   const diffArea=document.getElementById('ship-diff-area');
   if(diffArea) diffArea.style.display=_shipDiffMode?'block':'none';
 }
+
+// ━━━ 緊急待ちリスト ━━━
+const UW_KEY = 'hiyuku_uwait_v1';
+let urgentWaitList = JSON.parse(localStorage.getItem(UW_KEY)||'[]');
+
+function saveUW(){ localStorage.setItem(UW_KEY, JSON.stringify(urgentWaitList)); }
+
+function uwAutoFill(){
+  const tag5 = (document.getElementById('uw-tag').value||'').trim();
+  const el = document.getElementById('uw-info');
+  if(!tag5){ el.innerHTML=''; return; }
+  const hits = DB[tag5];
+  if(!hits||!hits.length){ el.innerHTML='<span style="color:#999">未検索</span>'; return; }
+  const c = hits[0];
+  el.innerHTML = `<span style="font-size:10px">${c.name||c.fullId||''} ${c.sex||''} ${c.breed||''}</span>`;
+}
+
+function uwToggleDate(){
+  const reason = document.getElementById('uw-reason').value;
+  const lbl = document.getElementById('uw-date-label');
+  if(reason === '休薬期間'){
+    lbl.textContent = '休薬終了日';
+  } else {
+    lbl.textContent = '出荷予定日';
+  }
+  uwCalcDays();
+}
+
+function uwCalcDays(){
+  const dateVal = document.getElementById('uw-date').value;
+  const el = document.getElementById('uw-days-info');
+  if(!dateVal){ el.textContent=''; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateVal);
+  const diff = Math.round((target - today)/(1000*60*60*24));
+  if(diff < 0){
+    el.textContent = `${Math.abs(diff)}日超過`;
+    el.style.color = '#c00';
+  } else if(diff === 0){
+    el.textContent = '本日';
+    el.style.color = '#c00';
+  } else if(diff <= 3){
+    el.textContent = `あと${diff}日`;
+    el.style.color = '#c77700';
+  } else {
+    el.textContent = `あと${diff}日`;
+    el.style.color = '#555';
+  }
+}
+
+function addUrgentWait(){
+  const tag5 = (document.getElementById('uw-tag').value||'').trim();
+  if(!tag5){ alert('耳標下5桁を入力してください'); return; }
+  const reason = document.getElementById('uw-reason').value;
+  const dateVal = document.getElementById('uw-date').value;
+  const memo = (document.getElementById('uw-memo').value||'').trim();
+
+  // 個体情報補完
+  const hits = DB[tag5];
+  let fullId='', name='', sex='', breed='', age=0, barnName='', pen='';
+  if(hits&&hits.length){
+    const c = hits[0];
+    fullId = c.fullId||''; name = c.name||''; sex = c.sex||''; breed = c.breed||''; age = c.age||0;
+    // マップから牛舎情報を探す
+    for(const key of Object.keys(cattle)){
+      if(cattle[key]&&String(cattle[key].fullId||'').slice(-5)===tag5){
+        barnName = cattle[key].barnName||cattle[key].barnId||'';
+        pen = cattle[key].pen||'';
+        break;
+      }
+    }
+  }
+
+  // 重複チェック
+  const existing = urgentWaitList.find(r=>!r.done && r.tag5===tag5);
+  if(existing){
+    if(!confirm(`耳標 ${tag5} は既に登録されています。重複登録しますか？`)) return;
+  }
+
+  const id = Date.now()+'_'+tag5;
+  const today = new Date();
+  const registeredAt = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
+  urgentWaitList.push({ id, tag5, fullId, name, sex, age, breed, barnName, pen,
+    reason, memo, scheduledDate: dateVal, registeredAt, done: false });
+  saveUW();
+
+  // フォームリセット
+  ['uw-tag','uw-memo','uw-date'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('uw-info').innerHTML='';
+  document.getElementById('uw-days-info').textContent='';
+  renderUrgentWaitList();
+}
+
+function resolveUrgentWait(id, action){
+  const idx = urgentWaitList.findIndex(r=>r.id===id);
+  if(idx<0) return;
+  const label = action==='ship'?'出荷完了':'取消';
+  if(!confirm(`「${label}」としてマークしますか？`)) return;
+  urgentWaitList[idx].done = true;
+  urgentWaitList[idx].resolvedAt = new Date().toLocaleDateString('ja-JP');
+  urgentWaitList[idx].resolveAction = action;
+  saveUW();
+  renderUrgentWaitList();
+}
+
+function renderUrgentWaitList(){
+  const el = document.getElementById('uw-list');
+  if(!el) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const active = urgentWaitList.filter(r=>!r.done);
+  const done = urgentWaitList.filter(r=>r.done).slice(-10).reverse();
+
+  if(!active.length && !done.length){
+    el.innerHTML = '<div style="font-size:12px;color:#999;text-align:center;padding:10px">登録なし</div>';
+    return;
+  }
+
+  let html = '';
+
+  // アクティブ
+  if(active.length){
+    html += '<div style="font-size:11px;font-weight:600;color:#555;margin-bottom:6px">待機中 '+active.length+'頭</div>';
+    active.forEach(r=>{
+      let urgClass='', urgBadge='';
+      if(r.scheduledDate){
+        const diff = Math.round((new Date(r.scheduledDate)-today)/(1000*60*60*24));
+        if(diff<0){ urgClass='background:#fff0f0;border-color:#f5c0c0'; urgBadge=`<span style="color:#c00;font-size:10px;margin-left:4px">${Math.abs(diff)}日超過</span>`; }
+        else if(diff<=3){ urgClass='background:#fffbe6;border-color:#f5c842'; urgBadge=`<span style="color:#c77700;font-size:10px;margin-left:4px">あと${diff}日</span>`; }
+      }
+      html += `<div style="border:1px solid #e0e0e0;border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:12px;${urgClass}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+          <div style="flex:1">
+            <span style="font-weight:600;color:#c00">●</span>
+            <span style="font-weight:600">${r.tag5}</span>
+            ${r.name?`<span style="color:#555"> ${r.name}</span>`:''}
+            ${r.sex?`<span style="color:#777;font-size:11px"> ${r.sex}</span>`:''}
+            ${r.barnName?`<span style="color:#777;font-size:11px"> ${r.barnName}${r.pen?'-'+r.pen+''+'房':''}</span>`:''}
+            <br>
+            <span style="color:#555">理由: ${r.reason}</span>
+            ${r.scheduledDate?`　予定: ${r.scheduledDate}${urgBadge}`:''}
+            ${r.memo?`<br><span style="color:#888">${r.memo}</span>`:''}
+            <br><span style="color:#aaa;font-size:10px">登録: ${r.registeredAt}</span>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0">
+            <button onclick="resolveUrgentWait('${r.id}','ship')" class="btn btn-sm btn-r" style="font-size:10px;padding:3px 7px">出荷完了</button>
+            <button onclick="resolveUrgentWait('${r.id}','cancel')" class="btn btn-sm" style="font-size:10px;padding:3px 7px">取消</button>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+
+  // 完了済み（最近10件）
+  if(done.length){
+    html += '<div style="font-size:11px;font-weight:600;color:#aaa;margin:10px 0 6px">完了済み（直近10件）</div>';
+    done.forEach(r=>{
+      const label = r.resolveAction==='ship'?'出荷完了':'取消';
+      html += `<div style="border:1px solid #eee;border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:11px;color:#aaa;opacity:0.7">
+        <span style="font-weight:600">${r.tag5}</span> ${r.name||''} ─ ${label}（${r.resolvedAt||''}）${r.reason?` / ${r.reason}`:''}
+      </div>`;
+    });
+  }
+
+  el.innerHTML = html;
+}
+
+function printUrgentWait(){
+  const active = urgentWaitList.filter(r=>!r.done);
+  const today = new Date(); today.setHours(0,0,0,0);
+  let rows = '';
+  active.forEach(r=>{
+    let days='';
+    if(r.scheduledDate){
+      const diff=Math.round((new Date(r.scheduledDate)-today)/(1000*60*60*24));
+      days = diff<0?`超過${Math.abs(diff)}日`:`あと${diff}日`;
+    }
+    rows += `<tr>
+      <td>${r.tag5}</td><td>${r.name||''}</td><td>${r.sex||''}</td>
+      <td>${r.barnName||''}${r.pen?'-'+r.pen+''+'房':''}</td>
+      <td>${r.reason}</td><td>${r.scheduledDate||''}</td><td>${days}</td><td>${r.memo||''}</td><td>${r.registeredAt||''}</td>
+    </tr>`;
+  });
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>緊急待ちリスト</title>
+  <style>body{font-family:sans-serif;font-size:12px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}th{background:#f0f0f0}h2{font-size:14px}</style>
+  </head><body><h2>🚨 緊急待ちリスト（${new Date().toLocaleDateString('ja-JP')} 現在）　待機中: ${active.length}頭</h2>
+  <table><thead><tr><th>耳標</th><th>名号</th><th>性別</th><th>牛舎・房</th><th>待機理由</th><th>予定日</th><th>残日数</th><th>メモ</th><th>登録日</th></tr></thead>
+  <tbody>${rows}</tbody></table></body></html>`);
+  w.document.close();
+  w.print();
+}
+
+// ページ表示時に緊急待ちリストを描画
+(function(){
+  const _goPage = typeof goPage === 'function' ? goPage : null;
+  if(_goPage){
+    const orig = goPage;
+    goPage = function(p){
+      orig(p);
+      if(p==='ops') setTimeout(renderUrgentWaitList, 50);
+    };
+  }
+})();
 
 </script></body></html>
