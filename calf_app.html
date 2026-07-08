@@ -283,6 +283,15 @@ textarea{resize:vertical;min-height:60px;}
 
 <!-- ════ PAGE: 設定 ════ -->
 <div class="pg" id="pg-set">
+  <div class="sec"><div class="sec-ttl">サーバー同期</div>
+    <div class="card">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">データは自動でサーバーに保存されます。手動で同期したい場合はこちら。</div>
+      <button class="btn btn-o" onclick="syncFromServer().then(()=>renderList())">🔄 サーバーから最新データを取得</button>
+      <button class="btn btn-o mt8" onclick="syncToServer()">☁️ ローカルデータをサーバーに送る</button>
+      <div id="sync-status" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
+    </div>
+  </div>
+
   <div class="sec"><div class="sec-ttl">Claude分析用エクスポート</div>
     <div class="claude-banner" style="margin-bottom:10px;">
       <div class="claude-banner-title">📤 使い方</div>
@@ -354,6 +363,8 @@ let ePhotos = [null,null,null];
 let evalType = '14日';
 let selectedRank = '';
 let importQueue = [];
+let syncStatus = 'idle'; // idle | syncing | ok | error
+const API = 'https://calf-api.d-masunaga30.workers.dev';
 
 // ══════ INIT ══════
 function init(){
@@ -363,11 +374,65 @@ function init(){
   const today = new Date().toISOString().slice(0,10);
   ['b-dob','e-dob','t-dob'].forEach(id=>document.getElementById(id).value=today);
   updateHeader();
+  // サーバーから最新データを取得
+  syncFromServer();
 }
-function save(){ localStorage.setItem('cv3_animals',JSON.stringify(animals)); updateHeader(); }
+
+function saveLocal(){
+  localStorage.setItem('cv3_animals', JSON.stringify(animals));
+  updateHeader();
+}
+
+async function save(){
+  saveLocal();
+  await syncToServer();
+}
+
 function updateHeader(){
   const n=animals.length, ev=animals.flatMap(a=>a.evals||[]).length;
-  document.getElementById('hdrSub').textContent=`${n}頭登録 / 評価${ev}件`;
+  const syncIcon = syncStatus==='syncing'?'🔄':syncStatus==='ok'?'☁️':syncStatus==='error'?'⚠️':'';
+  document.getElementById('hdrSub').textContent=`${n}頭登録 / 評価${ev}件 ${syncIcon}`;
+}
+
+// ══════ SERVER SYNC ══════
+async function syncToServer(){
+  syncStatus='syncing'; updateHeader();
+  try{
+    const res = await fetch(API+'/animals', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(animals)
+    });
+    if(!res.ok) throw new Error('save failed');
+    syncStatus='ok';
+  } catch(e){
+    syncStatus='error';
+    toast('⚠️ サーバー保存失敗（ローカルには保存済み）', 3000);
+  }
+  updateHeader();
+}
+
+async function syncFromServer(){
+  try{
+    syncStatus='syncing'; updateHeader();
+    const res = await fetch(API+'/animals');
+    if(!res.ok) throw new Error('fetch failed');
+    const serverAnimals = await res.json();
+    if(!Array.isArray(serverAnimals)) throw new Error('invalid');
+
+    if(serverAnimals.length === 0 && animals.length > 0){
+      // サーバーが空でローカルにデータあり → サーバーに上げる
+      await syncToServer();
+    } else if(serverAnimals.length > 0){
+      // サーバーのデータとローカルをマージ
+      const merged = mergeAnimals(serverAnimals);
+      saveLocal();
+    }
+    syncStatus='ok';
+  } catch(e){
+    syncStatus='error';
+  }
+  updateHeader();
 }
 function toast(msg,dur=2500){
   const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
