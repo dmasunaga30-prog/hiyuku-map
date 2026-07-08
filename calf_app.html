@@ -7,141 +7,69 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
-  --bg:       #111714;
-  --surf:     #192119;
-  --surf2:    #1f2b1f;
-  --surf3:    #263326;
-  --border:   #2d3d2d;
-  --border2:  #3a4f3a;
-  --acc:      #6dbf6d;
-  --acc2:     #4a9e4a;
-  --acc-dim:  #2a5c2a;
-  --warn:     #e8a84a;
-  --danger:   #e05555;
-  --text:     #e2ece2;
-  --text2:    #7a9a7a;
-  --text3:    #4d6a4d;
-  --A: #4caf50; --B: #ff9800; --C: #f44336;
-  --r: 10px;
+  --bg:#111714;--surf:#192119;--surf2:#1f2b1f;--surf3:#263326;
+  --border:#2d3d2d;--border2:#3a4f3a;--acc:#6dbf6d;--acc2:#4a9e4a;--acc-dim:#2a5c2a;
+  --warn:#e8a84a;--danger:#e05555;--text:#e2ece2;--text2:#7a9a7a;--text3:#4d6a4d;
+  --A:#4caf50;--B:#ff9800;--C:#f44336;--r:10px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Arial,sans-serif;min-height:100vh;padding-bottom:72px;font-size:14px;}
-
-/* ── TOAST ── */
 #toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--surf3);border:1px solid var(--border2);border-radius:8px;padding:10px 20px;font-size:13px;z-index:999;transition:transform .25s;pointer-events:none;}
 #toast.show{transform:translateX(-50%) translateY(0);}
-
-/* ── NAV ── */
 .nav{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--border);display:flex;z-index:100;}
 .nb{flex:1;padding:8px 2px 10px;background:none;border:none;color:var(--text2);font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:color .15s;}
-.nb svg{width:21px;height:21px;}
-.nb.on{color:var(--acc);}
-
-/* ── HEADER ── */
+.nb svg{width:21px;height:21px;}.nb.on{color:var(--acc);}
 .hdr{background:var(--surf);border-bottom:1px solid var(--border);padding:12px 16px;position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;}
 .hdr-title{font-size:15px;font-weight:800;letter-spacing:.04em;}
 .hdr-sub{font-size:11px;color:var(--text2);margin-top:2px;}
-
-/* ── PAGES ── */
-.pg{display:none;padding:14px;}
-.pg.on{display:block;}
-
-/* ── SECTION ── */
+.pg{display:none;padding:14px;}.pg.on{display:block;}
 .sec{margin-bottom:18px;}
 .sec-ttl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;}
-
-/* ── CARD ── */
 .card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;}
 .card-sm{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
-
-/* ── FORM ── */
 label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px;}
-input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{
-  width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:7px;
-  color:var(--text);font-size:14px;padding:9px 11px;outline:none;transition:border-color .15s;-webkit-appearance:none;appearance:none;}
+input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:14px;padding:9px 11px;outline:none;transition:border-color .15s;-webkit-appearance:none;appearance:none;}
 input:focus,select:focus,textarea:focus{border-color:var(--acc2);}
 textarea{resize:vertical;min-height:60px;}
-.fld{margin-bottom:12px;}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-
-/* ── PHOTO ── */
+.fld{margin-bottom:12px;}.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .ph-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .ph-slot{aspect-ratio:1;background:var(--surf2);border:1.5px dashed var(--border2);border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;transition:border-color .15s;}
-.ph-slot:hover{border-color:var(--acc2);}
-.ph-slot img{width:100%;height:100%;object-fit:cover;}
-.ph-slot .ph-lbl{font-size:10px;color:var(--text2);margin-top:4px;text-align:center;}
-.ph-slot .ph-ico{font-size:22px;}
+.ph-slot:hover{border-color:var(--acc2);}.ph-slot img{width:100%;height:100%;object-fit:cover;}
+.ph-slot .ph-lbl{font-size:10px;color:var(--text2);margin-top:4px;text-align:center;}.ph-slot .ph-ico{font-size:22px;}
 .ph-slot input{position:absolute;inset:0;opacity:0;cursor:pointer;}
 .ph-slot .ph-rm{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;}
-
-/* ── COUNTER ── */
-.ctr{display:flex;align-items:center;gap:10px;}
-.ctr-btn{width:34px;height:34px;background:var(--surf2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
-.ctr-val{font-size:22px;font-weight:700;min-width:28px;text-align:center;}
-
-/* ── BTN ── */
 .btn{width:100%;padding:13px;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s;}
-.btn:active{opacity:.7;}
-.btn-p{background:var(--acc2);color:#fff;}
-.btn-o{background:none;border:1px solid var(--border2);color:var(--text);}
+.btn:active{opacity:.7;}.btn-p{background:var(--acc2);color:#fff;}.btn-o{background:none;border:1px solid var(--border2);color:var(--text);}
+.btn-claude{background:linear-gradient(135deg,#7c4dff,#448aff);color:#fff;}
 .btn-w{background:rgba(232,168,74,.15);border:1px solid var(--warn);color:var(--warn);}
 .btn-d{background:var(--danger);color:#fff;}
 .btn-sm{width:auto;padding:7px 14px;font-size:12px;border-radius:7px;}
-.mt8{margin-top:8px;} .mt12{margin-top:12px;} .mt16{margin-top:16px;}
-
-/* ── BADGE ── */
+.mt8{margin-top:8px;}.mt12{margin-top:12px;}.mt16{margin-top:16px;}
 .bdg{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;font-weight:900;font-size:13px;}
-.bdg-A{background:rgba(76,175,80,.18);color:var(--A);}
-.bdg-B{background:rgba(255,152,0,.18);color:var(--B);}
-.bdg-C{background:rgba(244,67,54,.18);color:var(--C);}
-.bdg-x{background:rgba(255,255,255,.08);color:var(--text2);}
+.bdg-A{background:rgba(76,175,80,.18);color:var(--A);}.bdg-B{background:rgba(255,152,0,.18);color:var(--B);}
+.bdg-C{background:rgba(244,67,54,.18);color:var(--C);}.bdg-x{background:rgba(255,255,255,.08);color:var(--text2);}
 .bdg-birth{background:rgba(109,191,109,.1);color:var(--acc);font-size:10px;width:auto;padding:2px 7px;border-radius:4px;}
-
-/* ── RESULT ── */
-.res-card{background:var(--surf2);border-radius:var(--r);padding:20px;text-align:center;margin-bottom:14px;}
-.res-rank{font-size:68px;font-weight:900;line-height:1;}
-.res-rank.A{color:var(--A);} .res-rank.B{color:var(--B);} .res-rank.C{color:var(--C);}
-.res-act{font-size:12px;font-weight:700;padding:5px 14px;border-radius:18px;display:inline-block;margin-top:8px;}
-.res-act.A{background:rgba(76,175,80,.15);color:var(--A);}
-.res-act.B{background:rgba(255,152,0,.15);color:var(--B);}
-.res-act.C{background:rgba(244,67,54,.15);color:var(--C);}
-
-/* ── ROWS ── */
+.rank-big{font-size:64px;font-weight:900;line-height:1;}
+.rank-big.A{color:var(--A);}.rank-big.B{color:var(--B);}.rank-big.C{color:var(--C);}.rank-big.x{color:var(--text2);}
+.rank-act{font-size:12px;font-weight:700;padding:5px 14px;border-radius:18px;display:inline-block;margin-top:8px;}
+.rank-act.A{background:rgba(76,175,80,.15);color:var(--A);}.rank-act.B{background:rgba(255,152,0,.15);color:var(--B);}.rank-act.C{background:rgba(244,67,54,.15);color:var(--C);}
 .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
-.row:last-child{border-bottom:none;}
-.row-val{font-weight:700;}
-.row-hit{color:var(--warn);}
-
-/* ── LIST ── */
+.row:last-child{border-bottom:none;}.row-val{font-weight:700;}
 .li{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;}
-.li:last-child{border-bottom:none;}
-.li-info{flex:1;min-width:0;}
+.li:last-child{border-bottom:none;}.li-info{flex:1;min-width:0;}
 .li-id{font-size:14px;font-weight:700;}
 .li-meta{font-size:11px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .li-arr{color:var(--text3);font-size:18px;}
-
-/* ── STAT STRIP ── */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;}
 .stat{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
-.stat-n{font-size:26px;font-weight:900;}
-.stat-n.A{color:var(--A);} .stat-n.B{color:var(--B);} .stat-n.C{color:var(--C);}
+.stat-n{font-size:26px;font-weight:900;}.stat-n.A{color:var(--A);}.stat-n.B{color:var(--B);}.stat-n.C{color:var(--C);}
 .stat-l{font-size:10px;color:var(--text2);margin-top:2px;}
-
-/* ── SPINNER ── */
-.spin-wrap{display:flex;align-items:center;gap:10px;padding:20px 0;color:var(--text2);font-size:13px;}
-.spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;}
-@keyframes spin{to{transform:rotate(360deg);}}
-
-/* ── EMPTY ── */
 .empty{text-align:center;padding:52px 20px;color:var(--text2);}
-.empty .e-ico{font-size:44px;margin-bottom:10px;}
-.empty p{font-size:13px;}
-
-/* ── TAG ── */
+.empty .e-ico{font-size:44px;margin-bottom:10px;}.empty p{font-size:13px;}
 .tag{display:inline-block;padding:2px 7px;background:var(--surf2);border-radius:4px;font-size:11px;color:var(--text2);margin:2px;}
-
-/* ── TIMELINE ── */
+.flag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700;margin:2px;}
+.flag-drip{background:rgba(232,168,74,.18);color:var(--warn);border:1px solid rgba(232,168,74,.4);}
+.flag-blood{background:rgba(224,85,85,.18);color:var(--danger);border:1px solid rgba(224,85,85,.4);}
 .tl{display:flex;gap:0;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;}
 .tl-item{flex:0 0 72px;text-align:center;position:relative;}
 .tl-item::before{content:'';position:absolute;top:14px;left:50%;right:-50%;height:2px;background:var(--border2);}
@@ -150,66 +78,47 @@ textarea{resize:vertical;min-height:60px;}
 .tl-dot.done-A{background:rgba(76,175,80,.25);color:var(--A);border:2px solid var(--A);}
 .tl-dot.done-B{background:rgba(255,152,0,.25);color:var(--B);border:2px solid var(--B);}
 .tl-dot.done-C{background:rgba(244,67,54,.25);color:var(--C);border:2px solid var(--C);}
+.tl-dot.done-x{background:rgba(255,255,255,.1);color:var(--text2);border:2px solid var(--border2);}
 .tl-dot.birth{background:rgba(109,191,109,.15);color:var(--acc);border:2px solid var(--acc);font-size:9px;}
 .tl-dot.empty-dot{background:var(--surf2);border:2px dashed var(--border2);color:var(--text3);}
 .tl-lbl{font-size:9px;color:var(--text2);}
-
-/* ── TREAT LIST ── */
 .treat-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .treat-item:last-child{border-bottom:none;}
-
-/* ── SETTINGS ── */
 .set-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);}
-.set-row:last-child{border-bottom:none;}
-.set-lbl{font-size:13px;}
-.set-sub{font-size:11px;color:var(--text2);margin-top:1px;}
+.set-row:last-child{border-bottom:none;}.set-lbl{font-size:13px;}.set-sub{font-size:11px;color:var(--text2);margin-top:1px;}
 .set-in{width:65px;text-align:center;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:5px 6px;}
-
-.ai-text{font-size:13px;line-height:1.75;color:var(--text);white-space:pre-wrap;}
-.err{color:var(--danger);font-size:12px;margin-top:6px;text-align:center;}
 .muted{color:var(--text2);font-size:11px;}
-.divider{border:none;border-top:1px solid var(--border);margin:12px 0;}
-
-/* STEP TABS */
+.err{color:var(--danger);font-size:12px;margin-top:6px;text-align:center;}
 .step-tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;}
 .step-tab{flex:0 0 auto;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border2);background:none;color:var(--text2);transition:all .15s;}
 .step-tab.on{background:var(--acc-dim);border-color:var(--acc2);color:var(--acc);}
-
-/* EVAL TYPE SELECTOR */
 .eval-type-row{display:flex;gap:8px;margin-bottom:12px;}
 .eval-type-btn{flex:1;padding:8px;border-radius:8px;border:1px solid var(--border2);background:none;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;}
 .eval-type-btn.on{background:var(--acc-dim);border-color:var(--acc2);color:var(--acc);}
-
-/* SEARCH */
 .search-bar{position:relative;margin-bottom:12px;}
 .search-bar input{padding-left:34px;}
 .search-bar .s-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:15px;}
-
-/* DG INDICATOR */
 .dg-bar{height:6px;border-radius:3px;background:var(--surf2);margin-top:4px;overflow:hidden;}
 .dg-fill{height:100%;border-radius:3px;background:var(--acc2);}
-.dg-fill.warn{background:var(--warn);}
-.dg-fill.bad{background:var(--danger);}
-
-/* ── SEVERITY FLAGS ── */
-.flag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700;margin:2px;}
-.flag-drip{background:rgba(232,168,74,.18);color:var(--warn);border:1px solid rgba(232,168,74,.4);}
-.flag-blood{background:rgba(224,85,85,.18);color:var(--danger);border:1px solid rgba(224,85,85,.4);}
-
-/* ── IMPORT ── */
+.dg-fill.warn{background:var(--warn);}.dg-fill.bad{background:var(--danger);}
 .import-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:border-color .15s;position:relative;}
 .import-zone:hover{border-color:var(--acc2);}
 .import-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
-.import-zone .iz-ico{font-size:32px;margin-bottom:8px;}
-.import-zone .iz-lbl{font-size:13px;color:var(--text2);}
-.import-preview{margin-top:12px;}
-.import-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
-.import-row:last-child{border-bottom:none;}
-.conflict-badge{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(232,168,74,.15);color:var(--warn);margin-left:6px;}
+.import-zone .iz-ico{font-size:32px;margin-bottom:8px;}.import-zone .iz-lbl{font-size:13px;color:var(--text2);}
+/* Claude export banner */
+.claude-banner{background:linear-gradient(135deg,rgba(124,77,255,.15),rgba(68,138,255,.15));border:1px solid rgba(124,77,255,.4);border-radius:var(--r);padding:14px;margin-bottom:14px;}
+.claude-banner-title{font-size:13px;font-weight:700;color:#a78bfa;margin-bottom:4px;}
+.claude-banner-sub{font-size:11px;color:var(--text2);line-height:1.6;}
+/* rank selector */
+.rank-btns{display:flex;gap:8px;margin-top:6px;}
+.rank-btn{flex:1;padding:10px;border-radius:8px;border:2px solid var(--border2);background:none;font-size:16px;font-weight:900;cursor:pointer;transition:all .15s;}
+.rank-btn.sel-A{border-color:var(--A);background:rgba(76,175,80,.15);color:var(--A);}
+.rank-btn.sel-B{border-color:var(--B);background:rgba(255,152,0,.15);color:var(--B);}
+.rank-btn.sel-C{border-color:var(--C);background:rgba(244,67,54,.15);color:var(--C);}
+.rank-btn:not(.sel-A):not(.sel-B):not(.sel-C){color:var(--text2);}
 </style>
 </head>
 <body>
-
 <div id="toast"></div>
 
 <div class="hdr">
@@ -222,8 +131,6 @@ textarea{resize:vertical;min-height:60px;}
 
 <!-- ════ PAGE: 登録 ════ -->
 <div class="pg on" id="pg-reg">
-
-  <!-- STEP TABS -->
   <div class="step-tabs">
     <button class="step-tab on" onclick="switchStep('birth',this)">出生登録</button>
     <button class="step-tab" onclick="switchStep('eval',this)">評価入力</button>
@@ -232,8 +139,7 @@ textarea{resize:vertical;min-height:60px;}
 
   <!-- STEP: 出生登録 -->
   <div id="step-birth">
-    <div class="sec">
-      <div class="sec-ttl">個体基本情報</div>
+    <div class="sec"><div class="sec-ttl">個体基本情報</div>
       <div class="card">
         <div class="g2">
           <div class="fld"><label>耳標（下5桁）</label><input type="text" id="b-id" placeholder="12345" inputmode="numeric" maxlength="5"></div>
@@ -241,69 +147,52 @@ textarea{resize:vertical;min-height:60px;}
         </div>
         <div class="g2">
           <div class="fld"><label>母牛番号</label><input type="text" id="b-dam" placeholder="例: 67890"></div>
-          <div class="fld">
-            <label>性別</label>
-            <select id="b-sex"><option value="雌">雌</option><option value="雄">雄</option></select>
-          </div>
+          <div class="fld"><label>性別</label><select id="b-sex"><option value="雌">雌</option><option value="雄">雄</option></select></div>
         </div>
-        <div class="fld">
-          <label>品種</label>
-          <select id="b-breed">
-            <option value="黒毛和種">黒毛和種</option>
-            <option value="F1">F1（交雑）</option>
-            <option value="ホルスタイン">ホルスタイン</option>
-            <option value="その他">その他</option>
-          </select>
+        <div class="fld"><label>品種</label>
+          <select id="b-breed"><option value="黒毛和種">黒毛和種</option><option value="F1">F1（交雑）</option><option value="ホルスタイン">ホルスタイン</option><option value="その他">その他</option></select>
         </div>
       </div>
     </div>
-
-    <div class="sec">
-      <div class="sec-ttl">出生時記録</div>
+    <div class="sec"><div class="sec-ttl">出生時記録</div>
       <div class="card">
         <div class="g2">
           <div class="fld"><label>出生体重（kg）</label><input type="number" id="b-bw" placeholder="32.0" step="0.1" inputmode="decimal"></div>
-          <div class="fld">
-            <label>難産スコア</label>
-            <select id="b-dyst">
-              <option value="1">1: 正常</option>
-              <option value="2">2: 軽介助</option>
-              <option value="3">3: 強介助</option>
-            </select>
+          <div class="fld"><label>難産スコア</label>
+            <select id="b-dyst"><option value="1">1: 正常</option><option value="2">2: 軽介助</option><option value="3">3: 強介助</option></select>
           </div>
         </div>
         <div class="fld"><label>メモ</label><textarea id="b-memo" placeholder="初乳摂取・立ち上がりなど"></textarea></div>
       </div>
     </div>
-
-    <div class="sec">
-      <div class="sec-ttl">出生時写真（任意）</div>
-      <div class="ph-grid" id="birth-photos">
-        <div class="ph-slot" id="bslot-0"><input type="file" accept="image/*" capture="environment" onchange="loadBirthPhoto(0,this)"><div class="ph-ico">📷</div><div class="ph-lbl">正面・顔</div></div>
-        <div class="ph-slot" id="bslot-1"><input type="file" accept="image/*" capture="environment" onchange="loadBirthPhoto(1,this)"><div class="ph-ico">📷</div><div class="ph-lbl">側面・全体</div></div>
-        <div class="ph-slot" id="bslot-2"><input type="file" accept="image/*" capture="environment" onchange="loadBirthPhoto(2,this)"><div class="ph-ico">📷</div><div class="ph-lbl">後躯・骨盤</div></div>
+    <div class="sec"><div class="sec-ttl">出生時写真（任意）</div>
+      <div class="ph-grid">
+        <div class="ph-slot" id="bslot-0"><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadBirthPhoto(0,this)"><div class="ph-ico">📷</div><div class="ph-lbl">正面・顔</div></div>
+        <div class="ph-slot" id="bslot-1"><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadBirthPhoto(1,this)"><div class="ph-ico">📷</div><div class="ph-lbl">側面・全体</div></div>
+        <div class="ph-slot" id="bslot-2"><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadBirthPhoto(2,this)"><div class="ph-ico">📷</div><div class="ph-lbl">後躯・骨盤</div></div>
       </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:6px;">※JPEG/PNG/WebPのみ対応。iPhoneの方はカメラ設定→「互換性優先」に変更してください。</div>
     </div>
-
     <button class="btn btn-p" onclick="saveBirth()">出生情報を登録</button>
     <div class="err" id="b-err"></div>
   </div>
 
   <!-- STEP: 評価入力 -->
   <div id="step-eval" style="display:none;">
-    <div class="sec">
-      <div class="sec-ttl">対象個体</div>
+    <div class="claude-banner">
+      <div class="claude-banner-title">📋 Claude分析方式</div>
+      <div class="claude-banner-sub">写真・基本情報を記録 → JSONエクスポート → Claude.aiに貼り付けて評価<br>評価結果はここに手入力して蓄積します</div>
+    </div>
+    <div class="sec"><div class="sec-ttl">対象個体</div>
       <div class="card">
         <div class="g2">
-          <div class="fld"><label>耳標（下5桁）</label><input type="text" id="e-id" placeholder="12345" inputmode="numeric" maxlength="5" oninput="lookupAnimal('e-id','e-lookup')"></div>
-          <div class="fld"><label>生年月日</label><input type="date" id="e-dob" oninput="lookupAnimal('e-id','e-lookup')"></div>
+          <div class="fld"><label>耳標（下5桁）</label><input type="text" id="e-id" placeholder="12345" inputmode="numeric" maxlength="5" oninput="lookupAnimal('e-id','e-dob','e-lookup')"></div>
+          <div class="fld"><label>生年月日</label><input type="date" id="e-dob" oninput="lookupAnimal('e-id','e-dob','e-lookup')"></div>
         </div>
         <div id="e-lookup" style="font-size:12px;color:var(--acc);"></div>
       </div>
     </div>
-
-    <div class="sec">
-      <div class="sec-ttl">評価タイミング</div>
+    <div class="sec"><div class="sec-ttl">評価タイミング</div>
       <div class="eval-type-row">
         <button class="eval-type-btn on" onclick="setEvalType('7日',this)">7日齢</button>
         <button class="eval-type-btn" onclick="setEvalType('14日',this)">14日齢</button>
@@ -315,74 +204,69 @@ textarea{resize:vertical;min-height:60px;}
         <div class="fld"><label>体重（任意・kg）</label><input type="number" id="e-wt" placeholder="未測定" step="0.1" inputmode="decimal"></div>
       </div>
       <div class="fld"><label>哺乳行動</label>
-        <select id="e-nursing">
-          <option value="確認">吸乳確認あり</option>
-          <option value="不明">不明</option>
-          <option value="未確認">吸乳確認なし</option>
-        </select>
+        <select id="e-nursing"><option value="確認">吸乳確認あり</option><option value="不明">不明</option><option value="未確認">吸乳確認なし</option></select>
       </div>
     </div>
-
-    <div class="sec">
-      <div class="sec-ttl">写真（3箇所）</div>
+    <div class="sec"><div class="sec-ttl">写真（3箇所）※記録用</div>
       <div class="ph-grid">
-        <div class="ph-slot" id="eslot-0"><input type="file" accept="image/*" capture="environment" onchange="loadEvalPhoto(0,this)"><div class="ph-ico">📷</div><div class="ph-lbl">正面・顔</div></div>
-        <div class="ph-slot" id="eslot-1"><input type="file" accept="image/*" capture="environment" onchange="loadEvalPhoto(1,this)"><div class="ph-ico">📷</div><div class="ph-lbl">側面・全体</div></div>
-        <div class="ph-slot" id="eslot-2"><input type="file" accept="image/*" capture="environment" onchange="loadEvalPhoto(2,this)"><div class="ph-ico">📷</div><div class="ph-lbl">後躯・骨盤</div></div>
+        <div class="ph-slot" id="eslot-0"><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadEvalPhoto(0,this)"><div class="ph-ico">📷</div><div class="ph-lbl">正面・顔</div></div>
+        <div class="ph-slot" id="eslot-1"><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadEvalPhoto(1,this)"><div class="ph-ico">📷</div><div class="ph-lbl">側面・全体</div></div>
+        <div class="ph-slot" id="eslot-2"><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadEvalPhoto(2,this)"><div class="ph-ico">📷</div><div class="ph-lbl">後躯・骨盤</div></div>
       </div>
     </div>
-
     <div class="fld"><label>メモ（任意）</label><textarea id="e-memo" placeholder="観察・気になること"></textarea></div>
 
-    <button class="btn btn-p" onclick="runEval()">🤖 AI評価を実行</button>
+    <div class="sec"><div class="sec-ttl">AI評価結果（Claudeに聞いた後に入力）</div>
+      <div class="card">
+        <div class="fld"><label>判定ランク</label>
+          <div class="rank-btns">
+            <button class="rank-btn" id="rb-A" onclick="selectRank('A')">A</button>
+            <button class="rank-btn" id="rb-B" onclick="selectRank('B')">B</button>
+            <button class="rank-btn" id="rb-C" onclick="selectRank('C')">C</button>
+            <button class="rank-btn" id="rb-x" onclick="selectRank('')">後で</button>
+          </div>
+        </div>
+        <div class="fld"><label>推奨アクション・根拠（任意）</label><textarea id="e-reasoning" placeholder="Claudeの評価コメントをコピペ"></textarea></div>
+      </div>
+    </div>
+
+    <button class="btn btn-p" onclick="saveEval()">評価記録を保存</button>
     <div class="err" id="e-err"></div>
   </div>
 
   <!-- STEP: 治療記録 -->
   <div id="step-treat" style="display:none;">
-    <div class="sec">
-      <div class="sec-ttl">対象個体</div>
+    <div class="sec"><div class="sec-ttl">対象個体</div>
       <div class="card">
         <div class="g2">
-          <div class="fld"><label>耳標（下5桁）</label><input type="text" id="t-id" placeholder="12345" inputmode="numeric" maxlength="5" oninput="lookupAnimal('t-id','t-lookup')"></div>
-          <div class="fld"><label>生年月日</label><input type="date" id="t-dob" oninput="lookupAnimal('t-id','t-lookup')"></div>
+          <div class="fld"><label>耳標（下5桁）</label><input type="text" id="t-id" placeholder="12345" inputmode="numeric" maxlength="5" oninput="lookupAnimal('t-id','t-dob','t-lookup')"></div>
+          <div class="fld"><label>生年月日</label><input type="date" id="t-dob" oninput="lookupAnimal('t-id','t-dob','t-lookup')"></div>
         </div>
         <div id="t-lookup" style="font-size:12px;color:var(--acc);"></div>
       </div>
     </div>
-
-    <div class="sec">
-      <div class="sec-ttl">治療内容</div>
+    <div class="sec"><div class="sec-ttl">治療内容</div>
       <div class="card">
         <div class="g2">
           <div class="fld"><label>日齢</label><input type="number" id="t-age" placeholder="10" inputmode="numeric" min="0" max="90"></div>
-          <div class="fld">
-            <label>疾病区分</label>
-            <select id="t-disease">
-              <option value="下痢">下痢</option>
-              <option value="肺炎">肺炎</option>
-              <option value="臍帯炎">臍帯炎</option>
-              <option value="関節炎">関節炎</option>
-              <option value="その他">その他</option>
-            </select>
+          <div class="fld"><label>疾病区分</label>
+            <select id="t-disease"><option value="下痢">下痢</option><option value="肺炎">肺炎</option><option value="臍帯炎">臍帯炎</option><option value="関節炎">関節炎</option><option value="その他">その他</option></select>
           </div>
         </div>
         <div class="fld"><label>薬剤・処置</label><input type="text" id="t-drug" placeholder="例: セフチオフル、電解質補液"></div>
-        <div class="fld"><label>処置者</label><input type="text" id="t-staff" placeholder="担当者名"></div>
+        <div class="g2">
+          <div class="fld"><label>処置者</label><input type="text" id="t-staff" placeholder="担当者名"></div>
+          <div class="fld" style="display:flex;flex-direction:column;gap:6px;padding-top:16px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="t-drip" style="width:auto;"> 💧点滴</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="t-blood" style="width:auto;"> 🔴輸血</label>
+          </div>
+        </div>
         <div class="fld"><label>メモ</label><textarea id="t-memo" placeholder="症状・転帰など" style="min-height:48px;"></textarea></div>
       </div>
     </div>
-
     <button class="btn btn-p" onclick="saveTreat()">治療記録を保存</button>
     <div class="err" id="t-err"></div>
   </div>
-
-</div>
-
-<!-- ════ PAGE: 評価結果 ════ -->
-<div class="pg" id="pg-result">
-  <div id="result-wrap"></div>
-  <button class="btn btn-o mt16" onclick="goReg()">新しい評価へ</button>
 </div>
 
 <!-- ════ PAGE: 一覧 ════ -->
@@ -395,49 +279,37 @@ textarea{resize:vertical;min-height:60px;}
 </div>
 
 <!-- ════ PAGE: 詳細 ════ -->
-<div class="pg" id="pg-detail">
-  <div id="detail-wrap"></div>
-</div>
+<div class="pg" id="pg-detail"><div id="detail-wrap"></div></div>
 
 <!-- ════ PAGE: 設定 ════ -->
 <div class="pg" id="pg-set">
-  <div class="sec">
-    <div class="sec-ttl">APIキー</div>
+  <div class="sec"><div class="sec-ttl">Claude分析用エクスポート</div>
+    <div class="claude-banner" style="margin-bottom:10px;">
+      <div class="claude-banner-title">📤 使い方</div>
+      <div class="claude-banner-sub">① 「Claude分析レポートを出力」をタップ<br>② ダウンロードされたJSONをClaude.aiのチャットに添付<br>③「この子牛たちを評価してください」と送信<br>④ 評価結果を評価入力タブで手入力</div>
+    </div>
     <div class="card">
-      <div class="fld"><label>Anthropic API Key</label><input type="password" id="s-apikey" placeholder="sk-ant-..." autocomplete="off"></div>
-      <button class="btn btn-o btn-sm" onclick="saveApiKey()">保存</button>
-      <div id="s-apikey-st" style="font-size:11px;color:var(--text2);margin-top:6px;"></div>
+      <button class="btn btn-claude" onclick="exportForClaude()">🤖 Claude分析レポートを出力</button>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px;">※写真データを含むため数MB程度になる場合があります</div>
     </div>
   </div>
 
-  <div class="sec">
-    <div class="sec-ttl">判定閾値</div>
+  <div class="sec"><div class="sec-ttl">mowment 治療記録取り込み</div>
     <div class="card">
-      <div class="set-row"><div><div class="set-lbl">治療加点 トリガー回数</div><div class="set-sub">この回数以上で +3点</div></div><input class="set-in" type="number" id="s-th-tr" value="3" min="1"></div>
-      <div class="set-row"><div><div class="set-lbl">B判定 スコア下限</div><div class="set-sub">この点数以上でB</div></div><input class="set-in" type="number" id="s-th-b" value="2" min="1"></div>
-      <div class="set-row"><div><div class="set-lbl">C判定 スコア下限</div><div class="set-sub">この点数以上でC</div></div><input class="set-in" type="number" id="s-th-c" value="4" min="2"></div>
-      <button class="btn btn-o btn-sm mt12" onclick="saveTh()">閾値を保存</button>
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-ttl">mowment 治療記録取り込み</div>
-    <div class="card">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">mowmentから個体ごとにエクスポートしたExcelファイルをここに読み込みます。複数ファイル同時選択可。</div>
-      <div class="import-zone" id="import-zone">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">mowmentからエクスポートしたExcelを読み込みます。複数ファイル同時選択可。</div>
+      <div class="import-zone">
         <input type="file" accept=".xlsx" multiple onchange="handleImportFiles(this)">
         <div class="iz-ico">📂</div>
         <div class="iz-lbl">mowment Excelをここにドロップ<br>または タップして選択</div>
       </div>
-      <div class="import-preview" id="import-preview"></div>
+      <div id="import-preview"></div>
       <div id="import-err" class="err"></div>
     </div>
   </div>
 
-  <div class="sec">
-    <div class="sec-ttl">データ共有・マージ</div>
+  <div class="sec"><div class="sec-ttl">データ共有・マージ</div>
     <div class="card">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">スタッフ各自がエクスポートしたJSONを集約します。同じ個体は自動でマージされます。</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">スタッフ各自がエクスポートしたJSONを集約します。同じ個体は自動マージされます。</div>
       <div class="import-zone">
         <input type="file" accept=".json" multiple onchange="handleJsonImport(this)">
         <div class="iz-ico">🔀</div>
@@ -447,16 +319,14 @@ textarea{resize:vertical;min-height:60px;}
     </div>
   </div>
 
-  <div class="sec">
-    <div class="sec-ttl">エクスポート</div>
+  <div class="sec"><div class="sec-ttl">エクスポート</div>
     <div class="card">
       <button class="btn btn-w" onclick="exportXlsx()">📊 Excelエクスポート（全データ）</button>
-      <button class="btn btn-o mt8" onclick="exportJson()">📥 JSONエクスポート（自分のデータ）</button>
+      <button class="btn btn-o mt8" onclick="exportJson()">📥 JSONエクスポート（共有・バックアップ）</button>
     </div>
   </div>
 
-  <div class="sec">
-    <div class="sec-ttl">データ管理</div>
+  <div class="sec"><div class="sec-ttl">データ管理</div>
     <div class="card">
       <button class="btn btn-d" onclick="clearAll()">🗑 全データ削除</button>
     </div>
@@ -471,445 +341,243 @@ textarea{resize:vertical;min-height:60px;}
   <button class="nb" onclick="showPg('list',this);renderList();">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>一覧
   </button>
-  <button class="nb" onclick="showPg('set',this);loadSettings();">
+  <button class="nb" onclick="showPg('set',this);">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>設定
   </button>
 </nav>
 
 <script>
-// ══════════════════════════════════
-// STATE
-// ══════════════════════════════════
-let animals = [];      // 個体マスタ [{key, id5, dob, dam, sex, breed, birthWeight, dystocia, birthMemo, birthPhotos, evals[], treats[], followup{}}]
+// ══════ STATE ══════
+let animals = [];
 let bPhotos = [null,null,null];
 let ePhotos = [null,null,null];
 let evalType = '14日';
-let th = {tr:3, b:2, c:4};
+let selectedRank = '';
+let importQueue = [];
 
-function animalKey(id5, dob){ return id5 + '_' + (dob||''); }
-
-// ══════════════════════════════════
-// INIT
-// ══════════════════════════════════
+// ══════ INIT ══════
 function init(){
-  const a = localStorage.getItem('cv2_animals');
+  const a = localStorage.getItem('cv3_animals');
   if(a) animals = JSON.parse(a);
-  const t = localStorage.getItem('cv2_th');
-  if(t) th = JSON.parse(t);
   document.getElementById('hdrDate').textContent = new Date().toLocaleDateString('ja-JP');
-  updateHeader();
-  // default dob to today
   const today = new Date().toISOString().slice(0,10);
-  document.getElementById('b-dob').value = today;
-  document.getElementById('e-dob').value = today;
-  document.getElementById('t-dob').value = today;
+  ['b-dob','e-dob','t-dob'].forEach(id=>document.getElementById(id).value=today);
+  updateHeader();
 }
-
-function save(){ localStorage.setItem('cv2_animals', JSON.stringify(animals)); updateHeader(); }
-
+function save(){ localStorage.setItem('cv3_animals',JSON.stringify(animals)); updateHeader(); }
 function updateHeader(){
-  const n = animals.length;
-  const evals = animals.flatMap(a=>a.evals||[]).length;
-  document.getElementById('hdrSub').textContent = `${n}頭登録 / 評価${evals}件`;
+  const n=animals.length, ev=animals.flatMap(a=>a.evals||[]).length;
+  document.getElementById('hdrSub').textContent=`${n}頭登録 / 評価${ev}件`;
 }
-
-function toast(msg, dur=2000){
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'), dur);
+function toast(msg,dur=2500){
+  const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),dur);
 }
+function animalKey(id5,dob){ return id5+'_'+dob; }
 
-// ══════════════════════════════════
-// NAV / STEPS
-// ══════════════════════════════════
-function showPg(name, btn){
+// ══════ NAV ══════
+function showPg(name,btn){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.getElementById('pg-'+name).classList.add('on');
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   if(btn) btn.classList.add('on');
 }
-function goReg(){
-  showPg('reg');
-  document.querySelectorAll('.nb')[0].classList.add('on');
-  document.querySelectorAll('.nb')[1].classList.remove('on');
-  document.querySelectorAll('.nb')[2].classList.remove('on');
-}
-function switchStep(name, btn){
+function switchStep(name,btn){
   ['birth','eval','treat'].forEach(s=>document.getElementById('step-'+s).style.display='none');
   document.getElementById('step-'+name).style.display='block';
   document.querySelectorAll('.step-tab').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
 }
-function setEvalType(t, btn){
-  evalType = t;
+function setEvalType(t,btn){
+  evalType=t;
   document.querySelectorAll('.eval-type-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  const ageMap = {'7日':7,'14日':14,'30日':30};
-  if(ageMap[t]) document.getElementById('e-age').value = ageMap[t];
+  const m={'7日':7,'14日':14,'30日':30};
+  if(m[t]) document.getElementById('e-age').value=m[t];
+}
+function selectRank(r){
+  selectedRank=r;
+  ['A','B','C','x'].forEach(k=>{
+    const el=document.getElementById('rb-'+k);
+    el.className='rank-btn'+(r===k||(!r&&k==='x')?' sel-'+k:'');
+  });
 }
 
-// ══════════════════════════════════
-// PHOTOS
-// ══════════════════════════════════
-function loadBirthPhoto(i, input){
-  readPhoto(input, b64=>{ bPhotos[i]=b64; renderBSlot(i); });
+// ══════ PHOTOS ══════
+const phLabels=['正面・顔','側面・全体','後躯・骨盤'];
+function readPhoto(input,cb){
+  const f=input.files[0]; if(!f) return;
+  // Check file type
+  if(!['image/jpeg','image/png','image/webp'].includes(f.type)){
+    toast('JPEG/PNG/WebPのみ対応しています。iPhoneはカメラ設定→「互換性優先」に変更してください。',4000); return;
+  }
+  const r=new FileReader(); r.onload=e=>cb(e.target.result); r.readAsDataURL(f);
 }
-function loadEvalPhoto(i, input){
-  readPhoto(input, b64=>{ ePhotos[i]=b64; renderESlot(i); });
-}
-function readPhoto(input, cb){
-  const f = input.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = e => cb(e.target.result);
-  r.readAsDataURL(f);
-}
-const phLabels = ['正面・顔','側面・全体','後躯・骨盤'];
+function loadBirthPhoto(i,input){ readPhoto(input,b64=>{bPhotos[i]=b64;renderBSlot(i);}); }
+function loadEvalPhoto(i,input){ readPhoto(input,b64=>{ePhotos[i]=b64;renderESlot(i);}); }
 function renderBSlot(i){
-  const s = document.getElementById('bslot-'+i);
-  s.innerHTML = bPhotos[i]
-    ? `<img src="${bPhotos[i]}"><button class="ph-rm" onclick="bPhotos[${i}]=null;renderBSlot(${i})">×</button>`
-    : `<input type="file" accept="image/*" capture="environment" onchange="loadBirthPhoto(${i},this)"><div class="ph-ico">📷</div><div class="ph-lbl">${phLabels[i]}</div>`;
+  const s=document.getElementById('bslot-'+i);
+  s.innerHTML=bPhotos[i]
+    ?`<img src="${bPhotos[i]}"><button class="ph-rm" onclick="bPhotos[${i}]=null;renderBSlot(${i})">×</button>`
+    :`<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadBirthPhoto(${i},this)"><div class="ph-ico">📷</div><div class="ph-lbl">${phLabels[i]}</div>`;
 }
 function renderESlot(i){
-  const s = document.getElementById('eslot-'+i);
-  s.innerHTML = ePhotos[i]
-    ? `<img src="${ePhotos[i]}"><button class="ph-rm" onclick="ePhotos[${i}]=null;renderESlot(${i})">×</button>`
-    : `<input type="file" accept="image/*" capture="environment" onchange="loadEvalPhoto(${i},this)"><div class="ph-ico">📷</div><div class="ph-lbl">${phLabels[i]}</div>`;
+  const s=document.getElementById('eslot-'+i);
+  s.innerHTML=ePhotos[i]
+    ?`<img src="${ePhotos[i]}"><button class="ph-rm" onclick="ePhotos[${i}]=null;renderESlot(${i})">×</button>`
+    :`<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadEvalPhoto(${i},this)"><div class="ph-ico">📷</div><div class="ph-lbl">${phLabels[i]}</div>`;
 }
 
-// ══════════════════════════════════
-// LOOKUP
-// ══════════════════════════════════
-function lookupAnimal(idField, outId){
-  const id5 = document.getElementById(idField).value.trim();
-  const dob  = document.getElementById(idField === 'e-id' ? 'e-dob' : 't-dob').value;
-  const el = document.getElementById(outId);
-  if(!id5){ el.textContent=''; return; }
-  const key = animalKey(id5, dob);
-  const a = animals.find(x=>x.key===key);
-  if(a){
-    el.textContent = `✓ ${a.breed} | 母牛: ${a.dam||'不明'} | 出生体重: ${a.birthWeight||'未'}kg`;
-  } else {
-    const byId = animals.filter(x=>x.id5===id5);
-    if(byId.length>0){
-      el.innerHTML = `<span style="color:var(--warn)">⚠ 生年月日が一致しません（同耳標${byId.length}頭登録済）</span>`;
-    } else {
-      el.innerHTML = `<span style="color:var(--text2)">未登録（先に出生登録してください）</span>`;
-    }
+// ══════ LOOKUP ══════
+function lookupAnimal(idFld,dobFld,outId){
+  const id5=document.getElementById(idFld).value.trim();
+  const dob=document.getElementById(dobFld).value;
+  const el=document.getElementById(outId);
+  if(!id5){el.textContent='';return;}
+  const a=animals.find(x=>x.key===animalKey(id5,dob));
+  if(a) el.textContent=`✓ ${a.breed} | 母牛: ${a.dam||'不明'} | 出生: ${a.birthWeight||'未'}kg`;
+  else {
+    const byId=animals.filter(x=>x.id5===id5);
+    el.innerHTML=byId.length>0
+      ?`<span style="color:var(--warn)">⚠ 生年月日が一致しません（同耳標${byId.length}頭）</span>`
+      :`<span style="color:var(--text2)">未登録（先に出生登録してください）</span>`;
   }
 }
 
-// ══════════════════════════════════
-// 出生登録
-// ══════════════════════════════════
+// ══════ 出生登録 ══════
 function saveBirth(){
-  const id5 = document.getElementById('b-id').value.trim();
-  const dob  = document.getElementById('b-dob').value;
-  const err  = document.getElementById('b-err');
-  if(!id5 || !dob){ err.textContent='耳標と生年月日は必須です'; return; }
+  const id5=document.getElementById('b-id').value.trim();
+  const dob=document.getElementById('b-dob').value;
+  const err=document.getElementById('b-err');
+  if(!id5||!dob){err.textContent='耳標と生年月日は必須です';return;}
   err.textContent='';
-  const key = animalKey(id5, dob);
-  if(animals.find(a=>a.key===key)){ err.textContent='この個体はすでに登録されています'; return; }
-  const a = {
-    key, id5, dob,
-    dam:   document.getElementById('b-dam').value.trim(),
-    sex:   document.getElementById('b-sex').value,
-    breed: document.getElementById('b-breed').value,
-    birthWeight: parseFloat(document.getElementById('b-bw').value)||null,
-    dystocia: document.getElementById('b-dyst').value,
-    birthMemo: document.getElementById('b-memo').value.trim(),
-    birthPhotos: [...bPhotos],
-    evals: [], treats: [],
-    followup: {},
-    createdAt: new Date().toISOString()
-  };
-  animals.unshift(a);
+  const key=animalKey(id5,dob);
+  if(animals.find(a=>a.key===key)){err.textContent='この個体はすでに登録されています';return;}
+  animals.unshift({
+    key,id5,dob,
+    dam:document.getElementById('b-dam').value.trim(),
+    sex:document.getElementById('b-sex').value,
+    breed:document.getElementById('b-breed').value,
+    birthWeight:parseFloat(document.getElementById('b-bw').value)||null,
+    dystocia:document.getElementById('b-dyst').value,
+    birthMemo:document.getElementById('b-memo').value.trim(),
+    birthPhotos:[...bPhotos],
+    evals:[],treats:[],followup:{},
+    createdAt:new Date().toISOString()
+  });
   save();
-  // reset
   ['b-id','b-dam','b-bw','b-memo'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('b-dob').value = new Date().toISOString().slice(0,10);
-  bPhotos=[null,null,null]; [0,1,2].forEach(renderBSlot);
+  document.getElementById('b-dob').value=new Date().toISOString().slice(0,10);
+  bPhotos=[null,null,null];[0,1,2].forEach(renderBSlot);
   toast(`耳標 ${id5} を登録しました`);
 }
 
-// ══════════════════════════════════
-// AI評価
-// ══════════════════════════════════
-async function runEval(){
-  const id5 = document.getElementById('e-id').value.trim();
-  const dob  = document.getElementById('e-dob').value;
-  const age  = parseInt(document.getElementById('e-age').value)||14;
-  const wt   = parseFloat(document.getElementById('e-wt').value)||null;
-  const nursing = document.getElementById('e-nursing').value;
-  const memo = document.getElementById('e-memo').value.trim();
-  const err  = document.getElementById('e-err');
-
-  if(!id5){ err.textContent='耳標を入力してください'; return; }
+// ══════ 評価保存 ══════
+function saveEval(){
+  const id5=document.getElementById('e-id').value.trim();
+  const dob=document.getElementById('e-dob').value;
+  const err=document.getElementById('e-err');
+  if(!id5){err.textContent='耳標を入力してください';return;}
   err.textContent='';
-  const apiKey = localStorage.getItem('cv2_apikey');
-  if(!apiKey){ err.textContent='APIキーが未設定です（設定タブから入力）'; return; }
-
-  const key = animalKey(id5, dob);
-  let animal = animals.find(a=>a.key===key);
-  if(!animal){
-    // 未登録でも評価は可能（簡易モード）
-    animal = { key, id5, dob, dam:'', sex:'不明', breed:'不明', birthWeight:null, dystocia:'1', birthMemo:'', birthPhotos:[null,null,null], evals:[], treats:[], followup:{}, createdAt:new Date().toISOString() };
-    animals.unshift(animal);
-    save();
-  }
-
-  showPg('result');
-  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
-  document.getElementById('result-wrap').innerHTML = `<div class="spin-wrap"><div class="spinner"></div>写真を解析中...</div>`;
-
-  // build treats summary for this animal up to this age
-  const treats = (animal.treats||[]).filter(t=>t.age<=age);
-  const treatCount = treats.length;
-  const abxDaysEval = calcAbxDays(treats);
-  const dripDaysEval = calcDripDays(treats);
-  const hasBloodEval = treats.some(t=>t.blood);
-  const treatSummary = treats.map(t=>`${t.age}日齢: ${t.disease} (${t.drug})${t.drip?' [点滴]':''}${t.blood?' [輸血]':''}`).join('\n') || 'なし';
-
-  // DG calc if birthWeight known
-  let dgNote = '';
-  if(animal.birthWeight && wt && age>0){
-    const dg = ((wt - animal.birthWeight)/age).toFixed(3);
-    dgNote = `DG（出生〜現在）: ${dg} kg/日`;
-  }
-
-  const content = [];
-  const hasPhoto = ePhotos.some(p=>p);
-  ePhotos.forEach((p,i)=>{
-    if(p){
-      const [h,b64] = p.split(',');
-      const mt = h.match(/:(.*?);/)[1];
-      content.push({type:'image',source:{type:'base64',media_type:mt,data:b64}});
-      content.push({type:'text',text:`↑ 写真${i+1}: ${phLabels[i]}`});
-    }
-  });
-
-  const prompt = `あなたは経験豊富な獣医師・畜産コンサルタントです。
-以下の情報をもとに、親付け子牛の発育状態をA/B/C判定してください。
-
-【個体情報】
-- 耳標（下5桁）: ${id5}
-- 生年月日: ${animal.dob}
-- 品種: ${animal.breed}
-- 性別: ${animal.sex}
-- 母牛番号: ${animal.dam||'不明'}
-- 出生体重: ${animal.birthWeight ? animal.birthWeight+'kg' : '未測定'}
-- 難産スコア: ${animal.dystocia}
-
-【今回の評価（${evalType}・${age}日齢）】
-- 体重: ${wt ? wt+'kg' : '未測定'}
-- ${dgNote || 'DG: 計算不可（体重データ不足）'}
-- 哺乳行動: ${nursing}
-- メモ: ${memo||'なし'}
-
-【${age}日齢までの治療記録】
-- 記録件数: ${treatCount}件
-- 抗生剤投与日数: ${abxDaysEval}日
-- 点滴実施: ${dripDaysEval>0 ? dripDaysEval+'日（重篤）' : 'なし'}
-- 輸血: ${hasBloodEval ? 'あり（最重篤）' : 'なし'}
-${treatSummary}
-
-【判定基準】
-写真から以下を評価しスコアを付けてください：
-1. 被毛粗剛・脱毛（禿げ）→ 該当で2点
-2. 後躯・骨盤周囲の削痩 → 該当で2点
-3. 肋骨・肩の削痩 → 各1点
-4. 腹部の張り不足（哺乳不足サイン）→ 1点
-5. 耳垂れ・眼球陥没・元気消失 → 各1点
-6. 吸乳確認なし → 1点
-7. 抗生剤投与${th.tr}日以上 → 3点加算
-8. 点滴あり → 2点加算（重篤フラグ）
-9. 輸血あり → 4点加算（最重篤フラグ）
-${!hasPhoto ? '※写真なし。治療記録・哺乳行動・メモのみで判定してください。' : ''}
-
-判定：
-- 合計${th.b}点未満 → A（継続）
-- ${th.b}〜${th.c-1}点 → B（要注意・補助哺乳検討）
-- ${th.c}点以上 → C（哺育移動推奨）
-
-以下のJSON形式のみで回答してください（他の文字は一切含めない）：
-{"rank":"A","score":0,"action":"推奨アクション","findings":{"coat":"被毛","body":"体躯","abdomen":"腹部","face":"顔・活気"},"score_breakdown":[{"item":"項目名","points":0,"hit":false}],"reasoning":"根拠3〜5文"}`;
-
-  content.push({type:'text',text:prompt});
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body: JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content}]})
-    });
-    const data = await res.json();
-    if(data.error) throw new Error(data.error.message);
-    const text = data.content[0].text;
-    const result = JSON.parse(text.replace(/```json|```/g,'').trim());
-
-    // save eval
-    const evalRecord = {
-      type: evalType, age, weight: wt, nursing, memo,
-      photos: [...ePhotos],
-      treats_at_eval: treatCount,
-      abx_days_at_eval: abxDaysEval,
-      drip_days_at_eval: dripDaysEval,
-      blood_at_eval: hasBloodEval,
-      result,
-      date: new Date().toISOString()
-    };
-    animal.evals.push(evalRecord);
-    save();
-
-    renderResult(result, animal, evalRecord);
-
-    // reset
-    ePhotos=[null,null,null]; [0,1,2].forEach(renderESlot);
-    ['e-id','e-wt','e-memo'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('e-dob').value = new Date().toISOString().slice(0,10);
-    document.getElementById('e-lookup').textContent='';
-
-  } catch(e){
-    document.getElementById('result-wrap').innerHTML=`<div class="card" style="border-color:var(--danger)"><div style="color:var(--danger);font-weight:700">エラー</div><div style="font-size:12px;margin-top:6px;color:var(--text2)">${e.message}</div></div>`;
-  }
-}
-
-function renderResult(result, animal, ev){
-  const rc = result.rank;
-  const bd = (result.score_breakdown||[]).map(s=>`
-    <div class="row"><span>${s.item}</span><span class="row-val ${s.hit?'row-hit':''}">${s.hit?'+'+s.points:'−'}</span></div>`).join('');
-  const findings = result.findings||{};
-
-  const sevFlags = (ev.drip_days_at_eval>0 ? `<span class="flag flag-drip">💧点滴 ${ev.drip_days_at_eval}日</span>` : '')
-    + (ev.blood_at_eval ? `<span class="flag flag-blood">🔴輸血あり</span>` : '');
-  document.getElementById('result-wrap').innerHTML = `
-    <div class="res-card">
-      <div style="font-size:11px;color:var(--text2)">耳標 ${animal.id5} | ${ev.type}（${ev.age}日齢）</div>
-      <div class="res-rank ${rc}">${rc}</div>
-      <div style="font-size:12px;color:var(--text2)">スコア ${result.score}点 | 抗生剤${ev.abx_days_at_eval||0}日</div>
-      ${sevFlags ? `<div style="margin-top:6px">${sevFlags}</div>` : ''}
-      <div class="res-act ${rc}">${result.action}</div>
-    </div>
-
-    <div class="sec"><div class="sec-ttl">写真所見</div><div class="card">
-      <div class="row"><span>🐄 被毛</span><span style="font-size:12px;color:var(--text2);max-width:58%;text-align:right">${findings.coat||'−'}</span></div>
-      <div class="row"><span>🦴 体躯</span><span style="font-size:12px;color:var(--text2);max-width:58%;text-align:right">${findings.body||'−'}</span></div>
-      <div class="row"><span>🫃 腹部</span><span style="font-size:12px;color:var(--text2);max-width:58%;text-align:right">${findings.abdomen||'−'}</span></div>
-      <div class="row"><span>👁 顔・活気</span><span style="font-size:12px;color:var(--text2);max-width:58%;text-align:right">${findings.face||'−'}</span></div>
-    </div></div>
-
-    <div class="sec"><div class="sec-ttl">スコア内訳</div><div class="card">${bd}</div></div>
-
-    <div class="sec"><div class="sec-ttl">判断根拠</div><div class="card"><div class="ai-text">${result.reasoning}</div></div></div>
-
-    <div class="sec"><div class="sec-ttl">予後入力</div><div class="card">
-      <div class="g2">
-        <div class="fld"><label>離乳時DG（kg/日）</label><input type="number" id="fu-dg" placeholder="0.00" step="0.01" inputmode="decimal"></div>
-        <div class="fld"><label>離乳日齢</label><input type="number" id="fu-weaned" placeholder="60" inputmode="numeric"></div>
-      </div>
-      <div class="fld"><label>実際の転帰</label>
-        <select id="fu-outcome">
-          <option value="">未入力</option>
-          <option value="継続">継続（問題なし）</option>
-          <option value="哺育移動">哺育移動</option>
-          <option value="死亡">死亡</option>
-        </select>
-      </div>
-      <div class="fld"><label>メモ</label><textarea id="fu-memo" style="min-height:48px"></textarea></div>
-      <button class="btn btn-o btn-sm" onclick="saveFollowup('${animal.key}')">予後を保存</button>
-    </div></div>
-  `;
-}
-
-// ══════════════════════════════════
-// 治療記録保存
-// ══════════════════════════════════
-function saveTreat(){
-  const id5 = document.getElementById('t-id').value.trim();
-  const dob  = document.getElementById('t-dob').value;
-  const err  = document.getElementById('t-err');
-  if(!id5){ err.textContent='耳標を入力してください'; return; }
-  err.textContent='';
-  const key = animalKey(id5, dob);
-  let a = animals.find(x=>x.key===key);
+  const key=animalKey(id5,dob);
+  let a=animals.find(x=>x.key===key);
   if(!a){
-    err.textContent='個体が登録されていません（先に出生登録してください）'; return;
+    a={key,id5,dob,dam:'',sex:'不明',breed:'不明',birthWeight:null,dystocia:'1',birthMemo:'',birthPhotos:[null,null,null],evals:[],treats:[],followup:{},createdAt:new Date().toISOString()};
+    animals.unshift(a);
   }
-  const t = {
-    age:    parseInt(document.getElementById('t-age').value)||0,
-    disease:document.getElementById('t-disease').value,
-    drug:   document.getElementById('t-drug').value.trim(),
-    staff:  document.getElementById('t-staff').value.trim(),
-    memo:   document.getElementById('t-memo').value.trim(),
-    date:   new Date().toISOString()
-  };
+  const age=parseInt(document.getElementById('e-age').value)||14;
+  const wt=parseFloat(document.getElementById('e-wt').value)||null;
+  a.evals.push({
+    type:evalType,age,weight:wt,
+    nursing:document.getElementById('e-nursing').value,
+    memo:document.getElementById('e-memo').value.trim(),
+    photos:[...ePhotos],
+    rank:selectedRank,
+    reasoning:document.getElementById('e-reasoning').value.trim(),
+    date:new Date().toISOString()
+  });
+  a.evals.sort((x,y)=>x.age-y.age);
+  save();
+  ePhotos=[null,null,null];[0,1,2].forEach(renderESlot);
+  ['e-id','e-wt','e-memo','e-reasoning'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('e-dob').value=new Date().toISOString().slice(0,10);
+  document.getElementById('e-lookup').textContent='';
+  selectRank('');
+  toast(`評価記録を保存しました（耳標${id5}・${evalType}）`);
+}
+
+// ══════ 治療記録 ══════
+function saveTreat(){
+  const id5=document.getElementById('t-id').value.trim();
+  const dob=document.getElementById('t-dob').value;
+  const err=document.getElementById('t-err');
+  if(!id5){err.textContent='耳標を入力してください';return;}
+  err.textContent='';
+  const key=animalKey(id5,dob);
+  let a=animals.find(x=>x.key===key);
+  if(!a){err.textContent='個体が登録されていません（先に出生登録してください）';return;}
   if(!a.treats) a.treats=[];
-  a.treats.push(t);
+  a.treats.push({
+    age:parseInt(document.getElementById('t-age').value)||0,
+    disease:document.getElementById('t-disease').value,
+    drug:document.getElementById('t-drug').value.trim(),
+    staff:document.getElementById('t-staff').value.trim(),
+    drip:document.getElementById('t-drip').checked,
+    blood:document.getElementById('t-blood').checked,
+    memo:document.getElementById('t-memo').value.trim(),
+    date:new Date().toISOString()
+  });
+  a.treats.sort((x,y)=>x.age-y.age);
   save();
   ['t-age','t-drug','t-staff','t-memo'].forEach(id=>document.getElementById(id).value='');
-  toast(`治療記録を保存しました（${id5}・${t.age}日齢）`);
+  document.getElementById('t-drip').checked=false;
+  document.getElementById('t-blood').checked=false;
+  toast(`治療記録を保存しました（${id5}・${a.treats.slice(-1)[0].age}日齢）`);
 }
 
-// ══════════════════════════════════
-// 予後保存
-// ══════════════════════════════════
-function saveFollowup(key){
-  const a = animals.find(x=>x.key===key);
-  if(!a) return;
-  a.followup = {
-    dg:      parseFloat(document.getElementById('fu-dg').value)||null,
-    weaned:  parseInt(document.getElementById('fu-weaned').value)||null,
-    outcome: document.getElementById('fu-outcome').value,
-    memo:    document.getElementById('fu-memo').value.trim(),
-    date:    new Date().toISOString()
-  };
-  save();
-  toast('予後を保存しました');
+// ══════ 重篤度ヘルパー ══════
+const ABX=['アンピシリン','マルボシル','セフチオフル','フロル','ビクタス','ペニシリン','エンロフロキサシン','チルミコシン','ツラスロマイシン','フローフェニコール','アモキシシリン'];
+function hasAbx(drug){ return ABX.some(k=>(drug||'').includes(k)); }
+function calcAbxDays(treats){
+  const days=new Set();
+  (treats||[]).forEach(t=>{ if(!t.excluded) days.add(t.dateStr||String(t.age)); });
+  return days.size;
+}
+function calcDripDays(treats){
+  const days=new Set();
+  (treats||[]).forEach(t=>{ if(t.drip) days.add(t.dateStr||String(t.age)); });
+  return days.size;
 }
 
-// ══════════════════════════════════
-// 一覧
-// ══════════════════════════════════
+// ══════ 一覧 ══════
 function renderList(){
-  const q = (document.getElementById('list-search').value||'').trim().toLowerCase();
-  let list = animals;
-  if(q) list = list.filter(a=>a.id5.includes(q)||(a.dam||'').toLowerCase().includes(q));
-
-  const wrap = document.getElementById('list-wrap');
-  if(list.length===0){
-    wrap.innerHTML=`<div class="empty"><div class="e-ico">🐄</div><p>登録がありません</p></div>`; return;
-  }
-
-  const cnt = {A:0,B:0,C:0};
-  animals.forEach(a=>{
-    const last = (a.evals||[]).slice(-1)[0];
-    if(last?.result?.rank) cnt[last.result.rank]++;
-  });
-
-  const items = list.map((a,idx)=>{
-    const evals = a.evals||[];
-    const last = evals.slice(-1)[0];
-    const rank = last?.result?.rank||'−';
-    const bdgClass = rank==='A'?'bdg-A':rank==='B'?'bdg-B':rank==='C'?'bdg-C':'bdg-x';
-    const d = new Date(a.createdAt);
-    const dateStr = `${d.getMonth()+1}/${d.getDate()}生`;
-    const evalStr = evals.length>0 ? `評価${evals.length}回` : '未評価';
-    const abxDays = calcAbxDays(a.treats||[]);
-    const drip = (a.treats||[]).some(t=>t.drip);
-    const blood = (a.treats||[]).some(t=>t.blood);
-    const flagStr = (drip?'💧':'')+(blood?'🔴':'');
-    const treatStr = abxDays>0 ? ` / 抗生剤${abxDays}日${flagStr}` : '';
+  const q=(document.getElementById('list-search').value||'').trim().toLowerCase();
+  let list=animals;
+  if(q) list=list.filter(a=>a.id5.includes(q)||(a.dam||'').toLowerCase().includes(q));
+  const wrap=document.getElementById('list-wrap');
+  if(!list.length){wrap.innerHTML=`<div class="empty"><div class="e-ico">🐄</div><p>登録がありません</p></div>`;return;}
+  const cnt={A:0,B:0,C:0};
+  animals.forEach(a=>{const r=(a.evals||[]).slice(-1)[0]?.rank;if(r)cnt[r]++;});
+  const items=list.map(a=>{
+    const last=(a.evals||[]).slice(-1)[0];
+    const rank=last?.rank||'−';
+    const bc=rank==='A'?'bdg-A':rank==='B'?'bdg-B':rank==='C'?'bdg-C':'bdg-x';
+    const d=new Date(a.createdAt);
+    const ds=`${d.getMonth()+1}/${d.getDate()}生`;
+    const abx=calcAbxDays(a.treats||[]);
+    const drip=calcDripDays(a.treats||[]);
+    const blood=(a.treats||[]).some(t=>t.blood);
+    const flags=(drip>0?'💧':'')+( blood?'🔴':'');
+    const treatStr=abx>0?` / 抗生剤${abx}日${flags}`:'';
     return `<div class="li" onclick="showDetail('${a.key}')">
-      <div class="bdg ${bdgClass}">${rank}</div>
+      <div class="bdg ${bc}">${rank}</div>
       <div class="li-info">
         <div class="li-id">耳標 ${a.id5} <span class="muted">${a.breed}</span></div>
-        <div class="li-meta">${dateStr} | 母${a.dam||'不明'} | ${evalStr}${treatStr}</div>
+        <div class="li-meta">${ds} | 母${a.dam||'不明'} | 評価${(a.evals||[]).length}回${treatStr}</div>
       </div>
       <div class="li-arr">›</div>
     </div>`;
   }).join('');
-
   wrap.innerHTML=`
     <div class="stats">
       <div class="stat"><div class="stat-n A">${cnt.A}</div><div class="stat-l">A: 継続</div></div>
@@ -919,674 +587,379 @@ function renderList(){
     <div class="card">${items}</div>`;
 }
 
-// ══════════════════════════════════
-// 詳細
-// ══════════════════════════════════
+// ══════ 詳細 ══════
 function showDetail(key){
-  const a = animals.find(x=>x.key===key);
-  if(!a) return;
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  const abxDays=calcAbxDays(a.treats||[]);
+  const dripDays=calcDripDays(a.treats||[]);
+  const hasBlood=(a.treats||[]).some(t=>t.blood);
 
   // timeline
-  const evalTypes = ['出生','7日','14日','30日'];
-  const tlDots = evalTypes.map(et=>{
-    if(et==='出生'){
-      return `<div class="tl-item"><div class="tl-dot birth">出生</div><div class="tl-lbl">${a.birthWeight?a.birthWeight+'kg':'−'}</div></div>`;
-    }
-    const ev = (a.evals||[]).find(e=>e.type===et);
-    const rank = ev?.result?.rank;
-    const cls = rank ? `done-${rank}` : 'empty-dot';
-    const lbl = ev ? (ev.weight?ev.weight+'kg':'−') : '未';
-    return `<div class="tl-item"><div class="tl-dot ${cls}">${rank||et.replace('日','')}</div><div class="tl-lbl">${lbl}</div></div>`;
+  const tlDots=['出生','7日','14日','30日'].map(et=>{
+    if(et==='出生') return `<div class="tl-item"><div class="tl-dot birth">出生</div><div class="tl-lbl">${a.birthWeight?a.birthWeight+'kg':'−'}</div></div>`;
+    const ev=(a.evals||[]).find(e=>e.type===et);
+    const r=ev?.rank; const cls=r?`done-${r}`:'empty-dot';
+    return `<div class="tl-item"><div class="tl-dot ${cls}">${r||et.replace('日','')}</div><div class="tl-lbl">${ev?.weight?ev.weight+'kg':'未'}</div></div>`;
   }).join('');
 
   // evals
-  const evalsHtml = (a.evals||[]).slice().reverse().map(ev=>{
-    const rc = ev.result?.rank||'?';
-    const d = new Date(ev.date);
-    const ds = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
-    const photos = (ev.photos||[]).filter(Boolean);
-    const phHtml = photos.map((p,i)=>`<img src="${p}" style="width:calc(33% - 4px);border-radius:6px;object-fit:cover;aspect-ratio:1;">`).join('');
+  const evHtml=(a.evals||[]).slice().reverse().map(ev=>{
+    const r=ev.rank||'−'; const rc=r==='A'?'A':r==='B'?'B':r==='C'?'C':'x';
+    const d=new Date(ev.date);
+    const ds=`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const phHtml=(ev.photos||[]).filter(Boolean).map(p=>`<img src="${p}" style="width:calc(33% - 4px);border-radius:6px;object-fit:cover;aspect-ratio:1;">`).join('');
     return `<div class="card-sm">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-weight:700">${ev.type}（${ev.age}日齢）</span>
-        <span class="bdg bdg-${rc}">${rc}</span>
+        <span class="bdg bdg-${rc}">${r}</span>
       </div>
-      <div style="font-size:11px;color:var(--text2)">${ds} | ${ev.weight?ev.weight+'kg':'体重未測定'} | 哺乳:${ev.nursing}</div>
+      <div style="font-size:11px;color:var(--text2)">${ds} | ${ev.weight?ev.weight+'kg':'体重未測定'} | 哺乳:${ev.nursing||'−'}</div>
       ${phHtml?`<div style="display:flex;gap:4px;margin-top:8px;">${phHtml}</div>`:''}
-      ${ev.result?.reasoning?`<div class="ai-text" style="margin-top:8px;font-size:12px;">${ev.result.reasoning}</div>`:''}
+      ${ev.reasoning?`<div style="margin-top:8px;font-size:12px;line-height:1.6;white-space:pre-wrap;">${ev.reasoning}</div>`:''}
     </div>`;
-  }).join('') || '<div style="color:var(--text2);font-size:13px;">評価記録なし</div>';
+  }).join('')||'<div style="color:var(--text2);font-size:13px;">評価記録なし</div>';
 
   // treats
-  const abxDays = calcAbxDays(a.treats||[]);
-  const dripDays = calcDripDays(a.treats||[]);
-  const hasBlood = (a.treats||[]).some(t=>t.blood);
-  const treatSummaryHtml = (a.treats||[]).length>0 ? `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-      <span class="tag">抗生剤 <b>${abxDays}</b>日</span>
-      ${dripDays>0?`<span class="flag flag-drip">💧点滴 ${dripDays}日</span>`:''}
-      ${hasBlood?`<span class="flag flag-blood">🔴輸血あり</span>`:''}
-    </div>` : '';
-  const treatsHtml = treatSummaryHtml + ((a.treats||[]).map(t=>`
+  const treatFlags=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+    <span class="tag">抗生剤 <b>${abxDays}</b>日</span>
+    ${dripDays>0?`<span class="flag flag-drip">💧点滴 ${dripDays}日</span>`:''}
+    ${hasBlood?`<span class="flag flag-blood">🔴輸血あり</span>`:''}
+  </div>`;
+  const trHtml=(a.treats||[]).map(t=>`
     <div class="treat-item">
-      <div>
-        <span style="font-weight:700">${t.age}日齢</span>
-        <span class="tag">${t.disease}</span>
-        ${t.drip?'<span class="flag flag-drip" style="padding:1px 5px;font-size:10px;">点滴</span>':''}
-        ${t.blood?'<span class="flag flag-blood" style="padding:1px 5px;font-size:10px;">輸血</span>':''}
-        ${t.imported?'<span class="tag" style="opacity:.6">mowment</span>':''}
-      </div>
+      <div><span style="font-weight:700">${t.age}日齢</span> <span class="tag">${t.disease}</span>${t.drip?'<span class="flag flag-drip" style="padding:1px 5px;font-size:10px;">点滴</span>':''}${t.blood?'<span class="flag flag-blood" style="padding:1px 5px;font-size:10px;">輸血</span>':''}${t.imported?'<span class="tag" style="opacity:.6">mowment</span>':''}</div>
       <div style="color:var(--text2);text-align:right;font-size:11px;">${t.drug||''}</div>
-    </div>`).join('') || '<div style="color:var(--text2);font-size:13px;">治療記録なし</div>');
-
-  // followup
-  const fu = a.followup||{};
-  const fuHtml = fu.outcome||fu.dg ? `
-    <div class="card-sm">
-      ${fu.outcome?`<div>転帰: <b>${fu.outcome}</b></div>`:''}
-      ${fu.dg?`<div>離乳DG: <b>${fu.dg}</b> kg/日</div>`:''}
-      ${fu.weaned?`<div>離乳日齢: <b>${fu.weaned}</b>日</div>`:''}
-      ${fu.memo?`<div style="color:var(--text2);font-size:12px;margin-top:4px">${fu.memo}</div>`:''}
-    </div>` : '<div style="color:var(--text2);font-size:13px;">未入力</div>';
+    </div>`).join('')||'<div style="color:var(--text2);font-size:13px;">治療記録なし</div>';
 
   // DG
-  const lastEvalWithWt = (a.evals||[]).slice().reverse().find(e=>e.weight);
-  let dgHtml = '';
-  if(a.birthWeight && lastEvalWithWt){
-    const dg = ((lastEvalWithWt.weight - a.birthWeight)/lastEvalWithWt.age).toFixed(3);
-    const pct = Math.min(Math.max(parseFloat(dg)/1.2,0),1)*100;
-    const cls = parseFloat(dg)>=0.7?'':'warn';
-    dgHtml = `<div style="margin-top:8px"><div style="font-size:11px;color:var(--text2)">DG（出生〜${lastEvalWithWt.age}日齢）</div><div style="font-size:20px;font-weight:900;color:${parseFloat(dg)>=0.7?'var(--A)':'var(--warn)}'}">${dg} kg/日</div><div class="dg-bar"><div class="dg-fill ${cls}" style="width:${pct}%"></div></div></div>`;
+  const lastWt=(a.evals||[]).slice().reverse().find(e=>e.weight);
+  let dgHtml='';
+  if(a.birthWeight&&lastWt){
+    const dg=((lastWt.weight-a.birthWeight)/lastWt.age).toFixed(3);
+    const pct=Math.min(Math.max(parseFloat(dg)/1.2,0),1)*100;
+    const ok=parseFloat(dg)>=0.7;
+    dgHtml=`<div style="margin-top:8px"><div style="font-size:11px;color:var(--text2)">DG（出生〜${lastWt.age}日齢）</div><div style="font-size:20px;font-weight:900;color:${ok?'var(--A)':'var(--warn)'}">${dg} kg/日</div><div class="dg-bar"><div class="dg-fill ${ok?'':'warn'}" style="width:${pct}%"></div></div></div>`;
   }
 
-  document.getElementById('detail-wrap').innerHTML = `
+  // followup
+  const fu=a.followup||{};
+
+  document.getElementById('detail-wrap').innerHTML=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
       <button onclick="showPg('list');renderList();document.querySelectorAll('.nb')[1].classList.add('on');" style="background:none;border:none;color:var(--acc);font-size:14px;cursor:pointer;">← 一覧</button>
     </div>
-
     <div class="card" style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-          <div style="font-size:18px;font-weight:900">耳標 ${a.id5}</div>
+        <div><div style="font-size:18px;font-weight:900">耳標 ${a.id5}</div>
           <div style="font-size:12px;color:var(--text2);margin-top:2px">${a.dob} | ${a.breed} | ${a.sex} | 母牛: ${a.dam||'不明'}</div>
         </div>
         <div class="bdg bdg-birth">出生${a.birthWeight?a.birthWeight+'kg':''}</div>
-      </div>
-      ${dgHtml}
+      </div>${dgHtml}
     </div>
 
-    <div class="sec"><div class="sec-ttl">発育タイムライン</div>
-      <div class="tl">${tlDots}</div>
-    </div>
-
-    <div class="sec"><div class="sec-ttl">AI評価履歴</div>${evalsHtml}</div>
-
+    <div class="sec"><div class="sec-ttl">発育タイムライン</div><div class="tl">${tlDots}</div></div>
+    <div class="sec"><div class="sec-ttl">評価履歴</div>${evHtml}</div>
     <div class="sec"><div class="sec-ttl">治療記録（${(a.treats||[]).length}件 / 抗生剤${abxDays}日）</div>
-      <div class="card">${treatsHtml}</div>
+      <div class="card">${(a.treats||[]).length>0?treatFlags:''}${trHtml}</div>
     </div>
 
     <div class="sec"><div class="sec-ttl">予後・転帰</div>
-      ${fuHtml}
-      <div class="card-sm" style="margin-top:8px">
+      <div class="card-sm">
         <div class="g2">
-          <div class="fld"><label>離乳DG</label><input type="number" id="d-fu-dg" placeholder="0.00" step="0.01" inputmode="decimal" value="${fu.dg||''}"></div>
-          <div class="fld"><label>離乳日齢</label><input type="number" id="d-fu-weaned" placeholder="60" value="${fu.weaned||''}"></div>
+          <div class="fld"><label>離乳DG（kg/日）</label><input type="number" id="d-dg" placeholder="0.00" step="0.01" inputmode="decimal" value="${fu.dg||''}"></div>
+          <div class="fld"><label>離乳日齢</label><input type="number" id="d-weaned" placeholder="60" value="${fu.weaned||''}"></div>
         </div>
         <div class="fld"><label>転帰</label>
-          <select id="d-fu-outcome">
+          <select id="d-outcome">
             <option value="" ${!fu.outcome?'selected':''}>未入力</option>
             <option value="継続" ${fu.outcome==='継続'?'selected':''}>継続（問題なし）</option>
             <option value="哺育移動" ${fu.outcome==='哺育移動'?'selected':''}>哺育移動</option>
             <option value="死亡" ${fu.outcome==='死亡'?'selected':''}>死亡</option>
           </select>
         </div>
-        <div class="fld"><label>メモ</label><textarea id="d-fu-memo" style="min-height:48px">${fu.memo||''}</textarea></div>
-        <button class="btn btn-o btn-sm" onclick="saveDetailFollowup('${a.key}')">保存</button>
+        <div class="fld"><label>メモ</label><textarea id="d-memo" style="min-height:48px">${fu.memo||''}</textarea></div>
+        <button class="btn btn-o btn-sm" onclick="saveFollowup('${a.key}')">保存</button>
       </div>
     </div>
 
+    <button class="btn btn-claude mt8" onclick="exportAnimalForClaude('${a.key}')">🤖 この個体をClaude分析用に出力</button>
     <button class="btn btn-w mt8" onclick="exportAnimalXlsx('${a.key}')">📊 この個体をExcel出力</button>
     <button class="btn btn-d mt8" onclick="deleteAnimal('${a.key}')">削除</button>
   `;
   showPg('detail');
 }
 
-function saveDetailFollowup(key){
-  const a = animals.find(x=>x.key===key);
-  if(!a) return;
-  a.followup = {
-    dg:      parseFloat(document.getElementById('d-fu-dg').value)||null,
-    weaned:  parseInt(document.getElementById('d-fu-weaned').value)||null,
-    outcome: document.getElementById('d-fu-outcome').value,
-    memo:    document.getElementById('d-fu-memo').value.trim(),
-    date:    new Date().toISOString()
-  };
+function saveFollowup(key){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  a.followup={dg:parseFloat(document.getElementById('d-dg').value)||null,weaned:parseInt(document.getElementById('d-weaned').value)||null,outcome:document.getElementById('d-outcome').value,memo:document.getElementById('d-memo').value.trim(),date:new Date().toISOString()};
   save(); toast('予後を保存しました'); showDetail(key);
 }
-
 function deleteAnimal(key){
   if(!confirm('この個体の全データを削除しますか？')) return;
-  animals = animals.filter(a=>a.key!==key);
-  save();
-  showPg('list');
-  renderList();
-  document.querySelectorAll('.nb')[1].classList.add('on');
-  document.querySelectorAll('.nb')[0].classList.remove('on');
+  animals=animals.filter(a=>a.key!==key); save();
+  showPg('list'); renderList(); document.querySelectorAll('.nb')[1].classList.add('on');
   toast('削除しました');
 }
 
-// ══════════════════════════════════
-// 設定
-// ══════════════════════════════════
-function loadSettings(){
-  const k = localStorage.getItem('cv2_apikey');
-  if(k){ document.getElementById('s-apikey').value=k; document.getElementById('s-apikey-st').textContent='✓ 設定済み ('+k.slice(0,12)+'...)'; }
-  document.getElementById('s-th-tr').value=th.tr;
-  document.getElementById('s-th-b').value=th.b;
-  document.getElementById('s-th-c').value=th.c;
-}
-function saveApiKey(){
-  const k = document.getElementById('s-apikey').value.trim();
-  if(!k) return;
-  localStorage.setItem('cv2_apikey',k);
-  document.getElementById('s-apikey-st').textContent='✓ 保存しました';
-  toast('APIキーを保存しました');
-}
-function saveTh(){
-  th={tr:parseInt(document.getElementById('s-th-tr').value)||3,b:parseInt(document.getElementById('s-th-b').value)||2,c:parseInt(document.getElementById('s-th-c').value)||4};
-  localStorage.setItem('cv2_th',JSON.stringify(th));
-  toast('閾値を保存しました');
-}
-
-// ══════════════════════════════════
-// EXCEL エクスポート
-// ══════════════════════════════════
-function buildXlsxData(){
-  // Sheet1: 個体マスタ + 最終評価
-  const master = [['耳標','生年月日','母牛番号','性別','品種','出生体重(kg)','難産スコア','評価回数','抗生剤投与日数(〜30日)','点滴日数','輸血','最終AI判定','最終スコア','離乳DG(kg/日)','離乳日齢','転帰','出生メモ']];
-  animals.forEach(a=>{
-    const lastEval = (a.evals||[]).slice(-1)[0];
-    const treats30 = (a.treats||[]).filter(t=>t.age<=30);
-    const abx30 = calcAbxDays(treats30);
-    const drip30 = calcDripDays(treats30);
-    const blood30 = treats30.some(t=>t.blood) ? '有' : '';
-    const fu = a.followup||{};
-    master.push([a.id5,a.dob,a.dam,a.sex,a.breed,a.birthWeight||'',a.dystocia,(a.evals||[]).length,abx30,drip30||'',blood30,lastEval?.result?.rank||'',lastEval?.result?.score||'',fu.dg||'',fu.weaned||'',fu.outcome||'',a.birthMemo||'']);
+// ══════ Claude分析用エクスポート ══════
+function buildClaudeReport(targetAnimals){
+  // 写真は含めてJSONに、テキスト情報も整理して出力
+  return targetAnimals.map(a=>{
+    const abxDays=calcAbxDays(a.treats||[]);
+    const dripDays=calcDripDays(a.treats||[]);
+    const hasBlood=(a.treats||[]).some(t=>t.blood);
+    const lastEval=(a.evals||[]).slice(-1)[0];
+    const lastWt=(a.evals||[]).slice().reverse().find(e=>e.weight);
+    let dg=null;
+    if(a.birthWeight&&lastWt) dg=((lastWt.weight-a.birthWeight)/lastWt.age).toFixed(3);
+    return {
+      耳標:a.id5, 生年月日:a.dob, 母牛番号:a.dam, 品種:a.breed, 性別:a.sex,
+      出生体重kg:a.birthWeight, 難産スコア:a.dystocia,
+      DG_kgPerDay:dg,
+      現在の評価ランク:lastEval?.rank||'未評価',
+      抗生剤投与日数:abxDays,
+      点滴日数:dripDays,
+      輸血:hasBlood,
+      評価履歴:(a.evals||[]).map(ev=>({
+        タイプ:ev.type, 日齢:ev.age, 体重kg:ev.weight,
+        哺乳行動:ev.nursing, 既存ランク:ev.rank||'未入力',
+        メモ:ev.memo, 写真枚数:(ev.photos||[]).filter(Boolean).length,
+        写真データ:(ev.photos||[]).filter(Boolean) // base64
+      })),
+      治療記録:(a.treats||[]).map(t=>({日齢:t.age,疾病:t.disease,薬剤:t.drug,点滴:t.drip,輸血:t.blood})),
+      出生時写真:(a.birthPhotos||[]).filter(Boolean),
+      メモ:a.birthMemo
+    };
   });
-
-  // Sheet2: 評価詳細
-  const evals = [['耳標','生年月日','母牛番号','出生体重(kg)','評価タイプ','日齢','体重(kg)','哺乳行動','抗生剤日数(評価時)','点滴日数','輸血','AI判定','スコア','推奨アクション','被毛所見','体躯所見','腹部所見','顔・活気所見','判断根拠','評価日時']];
-  animals.forEach(a=>{
-    (a.evals||[]).forEach(ev=>{
-      const f = ev.result?.findings||{};
-      evals.push([a.id5,a.dob,a.dam,a.birthWeight||'',ev.type,ev.age,ev.weight||'',ev.nursing,ev.abx_days_at_eval||0,ev.drip_days_at_eval||0,ev.blood_at_eval?'有':'',ev.result?.rank||'',ev.result?.score||'',ev.result?.action||'',f.coat||'',f.body||'',f.abdomen||'',f.face||'',ev.result?.reasoning||'',ev.date]);
-    });
-  });
-
-  // Sheet3: 治療記録
-  const treats = [['耳標','生年月日','母牛番号','品種','日齢','疾病区分','薬剤・処置','点滴','輸血','処置者','メモ','記録日時','取込元']];
-  animals.forEach(a=>{
-    (a.treats||[]).forEach(t=>{
-      treats.push([a.id5,a.dob,a.dam,a.breed,t.age,t.disease,t.drug||'',t.drip?'有':'',t.blood?'有':'',t.staff||'',t.memo||'',t.date,t.imported?'mowment':'手入力']);
-    });
-  });
-
-  // Sheet4: 予後・転帰
-  const followups = [['耳標','生年月日','母牛番号','品種','出生体重(kg)','初回AI判定','最終AI判定','転帰','離乳DG(kg/日)','離乳日齢','予後メモ']];
-  animals.forEach(a=>{
-    const fu = a.followup||{};
-    if(!fu.outcome && !fu.dg) return;
-    const firstEval = (a.evals||[])[0];
-    const lastEval = (a.evals||[]).slice(-1)[0];
-    followups.push([a.id5,a.dob,a.dam,a.breed,a.birthWeight||'',firstEval?.result?.rank||'',lastEval?.result?.rank||'',fu.outcome||'',fu.dg||'',fu.weaned||'',fu.memo||'']);
-  });
-
-  return { master, evals, treats, followups };
 }
 
-function exportXlsx(){
-  const { master, evals, treats, followups } = buildXlsxData();
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(master), '個体マスタ');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(evals), 'AI評価詳細');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(treats), '治療記録');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(followups), '予後・転帰');
-  const date = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `子牛発育管理_${date}.xlsx`);
-  toast('Excelをダウンロードしました');
+function exportForClaude(){
+  if(!animals.length){toast('登録データがありません');return;}
+  const report=buildClaudeReport(animals);
+  const prompt=`以下は子牛発育管理アプリから出力したデータです。\n各個体について以下の観点で評価してください：\n1. 写真（正面・側面・後躯）から被毛粗剛・削痩・腹部の張り・活気を評価\n2. 治療記録（抗生剤日数・点滴・輸血）から重篤度を評価\n3. A（継続）/B（要注意・補助哺乳検討）/C（哺育移動推奨）で判定\n4. 判断根拠を簡潔に記述\n\n【評価基準】\n- 被毛粗剛・脱毛:2点 / 後躯削痩:2点 / 肋骨・肩削痩:各1点\n- 腹部張り不足:1点 / 耳垂れ・眼球陥没・元気消失:各1点\n- 抗生剤3日以上:3点 / 点滴あり:2点 / 輸血あり:4点\n- 4点未満:A / 4〜5点:B / 6点以上:C\n\n${JSON.stringify(report,null,2)}`;
+  const blob=new Blob([prompt],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const el=document.createElement('a');
+  el.href=url; el.download=`claude_report_${new Date().toISOString().slice(0,10)}.txt`; el.click();
+  toast('Claude分析レポートを出力しました');
 }
 
-function exportAnimalXlsx(key){
-  const a = animals.find(x=>x.key===key);
-  if(!a) return;
-  const wb = XLSX.utils.book_new();
-
-  // 基本情報
-  const info = [
-    ['項目','内容'],
-    ['耳標',a.id5],['生年月日',a.dob],['母牛番号',a.dam],['性別',a.sex],
-    ['品種',a.breed],['出生体重(kg)',a.birthWeight||'未測定'],['難産スコア',a.dystocia],['出生メモ',a.birthMemo||'']
-  ];
-  const fu = a.followup||{};
-  if(fu.outcome) info.push(['転帰',fu.outcome]);
-  if(fu.dg) info.push(['離乳DG(kg/日)',fu.dg]);
-  if(fu.weaned) info.push(['離乳日齢',fu.weaned]);
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(info), '基本情報');
-
-  // 評価
-  const evSheet = [['評価タイプ','日齢','体重(kg)','哺乳行動','AI判定','スコア','推奨','判断根拠','評価日時']];
-  (a.evals||[]).forEach(ev=>{
-    evSheet.push([ev.type,ev.age,ev.weight||'',ev.nursing,ev.result?.rank||'',ev.result?.score||'',ev.result?.action||'',ev.result?.reasoning||'',ev.date]);
-  });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(evSheet), 'AI評価');
-
-  // 治療
-  const trSheet = [['日齢','疾病区分','薬剤・処置','処置者','メモ']];
-  (a.treats||[]).forEach(t=>trSheet.push([t.age,t.disease,t.drug,t.staff,t.memo]));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trSheet), '治療記録');
-
-  XLSX.writeFile(wb, `子牛_${a.id5}_${a.dob}.xlsx`);
-  toast('個体Excelをダウンロードしました');
+function exportAnimalForClaude(key){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  const report=buildClaudeReport([a]);
+  const prompt=`以下の子牛個体（耳標${a.id5}）を評価してください。\n写真（正面・側面・後躯）から被毛粗剛・削痩・腹部の張り・活気を評価し、治療記録も考慮してA/B/C判定と根拠を教えてください。\n\n${JSON.stringify(report,null,2)}`;
+  const blob=new Blob([prompt],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const el=document.createElement('a');
+  el.href=url; el.download=`claude_${a.id5}_${a.dob}.txt`; el.click();
+  toast(`耳標${a.id5}のClaude分析用ファイルを出力しました`);
 }
 
-function exportJson(){
-  const blob = new Blob([JSON.stringify(animals,null,2)],{type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download=`calf_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
-  toast('JSONバックアップを保存しました');
-}
-
-function clearAll(){
-  if(!confirm('全データを削除しますか？この操作は取り消せません。')) return;
-  animals=[];
-  save();
-  toast('全データを削除しました');
-}
-
-// ══════════════════════════════════
-// 重篤度計算ヘルパー
-// ══════════════════════════════════
-
-// 抗生剤キーワード
-const ABX_KEYWORDS = ['アンピシリン','マルボシル','セフチオフル','フロル','ビクタス','ペニシリン','エンロフロキサシン','チルミコシン','ツラスロマイシン','フローフェニコール','アモキシシリン'];
-// 除外キーワード（単体ではカウントしない）
-const EXCLUDE_ONLY = ['鉄/TSV','TSV3','ワクチン','アイボメック','TSV','鉄剤','ビオスリー','ビオエンチ','マンダ'];
-
-function hasAbx(drugText){
-  if(!drugText) return false;
-  return ABX_KEYWORDS.some(k=>drugText.includes(k));
-}
-
-function isExcluded(drugText, symptom){
-  // 抗生剤があればカウント対象
-  if(hasAbx(drugText)) return false;
-  // 症状があればカウント対象
-  if(symptom && symptom.trim()) return false;
-  // 薬品が除外キーワードのみなら除外
-  return true;
-}
-
-// 抗生剤投与日数（日付ユニーク）
-function calcAbxDays(treats){
-  const days = new Set();
-  (treats||[]).forEach(t=>{
-    if(!t.excluded) days.add(t.age + '_' + (t.dateStr||t.age));
-  });
-  return days.size;
-}
-
-// 点滴日数
-function calcDripDays(treats){
-  const days = new Set();
-  (treats||[]).forEach(t=>{ if(t.drip) days.add(t.age); });
-  return days.size;
-}
-
-// ══════════════════════════════════
-// mowment Excel 取り込み
-// ══════════════════════════════════
-let importQueue = []; // [{filename, id10, id5, rows, parsed}]
-
+// ══════ mowment Excel取り込み ══════
 function handleImportFiles(input){
-  const files = Array.from(input.files);
-  if(!files.length) return;
-  importQueue = [];
-  document.getElementById('import-preview').innerHTML = '<div style="color:var(--text2);font-size:12px;padding:8px 0">読み込み中...</div>';
-  document.getElementById('import-err').textContent = '';
-
-  let done = 0;
+  const files=Array.from(input.files); if(!files.length) return;
+  importQueue=[];
+  document.getElementById('import-preview').innerHTML='<div style="color:var(--text2);font-size:12px;padding:8px 0">読み込み中...</div>';
+  let done=0;
   files.forEach(f=>{
-    const reader = new FileReader();
-    reader.onload = e=>{
-      try {
-        const wb = XLSX.read(e.target.result, {type:'array'});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-        const parsed = parseMowmentSheet(raw, f.name);
-        importQueue.push(parsed);
-      } catch(err){
-        importQueue.push({filename:f.name, error:err.message});
-      }
-      done++;
-      if(done===files.length) renderImportPreview();
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        importQueue.push(parseMowmentSheet(raw,f.name));
+      }catch(err){ importQueue.push({filename:f.name,error:err.message}); }
+      done++; if(done===files.length) renderImportPreview();
     };
     reader.readAsArrayBuffer(f);
   });
 }
 
-function parseMowmentSheet(rows, filename){
-  // Row0: 個体識別番号 / 管理番号 / 名称
-  // Row1: ヘッダー
-  // Row2+: データ
-  if(!rows || rows.length < 2) return {filename, error:'データが読み取れません'};
-
-  const headerRow0 = rows[0];
-  const id10 = String(headerRow0[1]||'').trim();
-  const id5  = id10.slice(-5);
-
-  const headers = rows[1].map(h=>String(h||'').trim());
-  const colIdx = {};
-  headers.forEach((h,i)=>{ colIdx[h]=i; });
-
-  const COL_DATE    = colIdx['日時']           ?? 0;
-  const COL_STAFF   = colIdx['担当者']         ?? 1;
-  const COL_ROOM    = colIdx['小屋']           ?? 2;
-  const COL_CONTENT = colIdx['治療内容']       ?? 3;
-  const COL_MEMO    = colIdx['メモ']           ?? 4;
-  const COL_TEMP    = colIdx['体温']           ?? 5;
-  const COL_WT      = colIdx['体重']           ?? 6;
-  const COL_SYMPTOM = colIdx['症状']           ?? 7;
-  const COL_DRUG    = colIdx['薬品・ワクチン名'] ?? 8;
-
-  const dataRows = rows.slice(2).filter(r=>r.some(c=>String(c||'').trim()));
-
-  // 生年月日を推定（日時列の最小日付の前後から推測は不可なので後でユーザー確認）
-  // 取り込み後に日齢計算するため、生年月日は別途必要
-
-  const treats = [];
-  const seenDays = new Set(); // 抗生剤投与日のユニーク管理
-
-  dataRows.forEach(r=>{
-    const dateRaw  = String(r[COL_DATE]||'').trim();
-    const staff    = String(r[COL_STAFF]||'').trim();
-    const content  = String(r[COL_CONTENT]||'').trim();
-    const symptom  = String(r[COL_SYMPTOM]||'').trim();
-    const drugText = String(r[COL_DRUG]||'').trim();
-    const memo     = String(r[COL_MEMO]||'').trim();
-    const wtRaw    = String(r[COL_WT]||'').trim();
-
-    if(!dateRaw) return;
-
-    // 日付パース: "2026/06/08 08時" → Date
-    const dateMatch = dateRaw.match(/(\d{4})\/(\d{2})\/(\d{2})/);
-    if(!dateMatch) return;
-    const dateStr = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
-
-    // 点滴フラグ
-    const drip  = drugText.includes('点滴');
-    // 輸血フラグ
-    const blood = content.includes('輸血');
-
-    // 疾病区分の自動判定
-    const combinedText = symptom + drugText + content;
-    let disease = 'その他';
-    if(/下痢|水溶性便|軟便|白痢|泥状便/.test(combinedText)) disease = '下痢';
-    else if(/肺炎|呼吸|喘鳴|咳/.test(combinedText)) disease = '肺炎';
-    else if(/臍帯|へそ/.test(combinedText)) disease = '臍帯炎';
-    else if(/関節/.test(combinedText)) disease = '関節炎';
-
-    // 除外判定（抗生剤なし・症状なし → カウントしない）
-    const excluded = isExcluded(drugText, symptom) && !drip && !blood;
-
-    treats.push({
-      dateStr,
-      staff,
-      disease,
-      drug: drugText,
-      symptom,
-      memo,
-      content,
-      weight: wtRaw ? parseFloat(wtRaw)||null : null,
-      drip,
-      blood,
-      excluded,
-      imported: true,
-      date: new Date(dateStr).toISOString()
-    });
+function parseMowmentSheet(rows,filename){
+  if(!rows||rows.length<2) return{filename,error:'データが読み取れません'};
+  const id10=String(rows[0][1]||'').trim(); const id5=id10.slice(-5);
+  const headers=rows[1].map(h=>String(h||'').trim());
+  const ci={};headers.forEach((h,i)=>ci[h]=i);
+  const CD=ci['日時']??0,CC=ci['治療内容']??3,CS=ci['症状']??7,CDR=ci['薬品・ワクチン名']??8;
+  const treats=[];
+  rows.slice(2).filter(r=>r.some(c=>String(c||'').trim())).forEach(r=>{
+    const dateRaw=String(r[CD]||'').trim(); if(!dateRaw) return;
+    const m=dateRaw.match(/(\d{4})\/(\d{2})\/(\d{2})/); if(!m) return;
+    const dateStr=`${m[1]}-${m[2]}-${m[3]}`;
+    const content=String(r[CC]||'').trim();
+    const symptom=String(r[CS]||'').trim();
+    const drugText=String(r[CDR]||'').trim();
+    const drip=drugText.includes('点滴');
+    const blood=content.includes('輸血');
+    const combo=symptom+drugText+content;
+    let disease='その他';
+    if(/下痢|水溶性便|軟便|白痢/.test(combo)) disease='下痢';
+    else if(/肺炎|呼吸|喘鳴/.test(combo)) disease='肺炎';
+    else if(/臍帯|へそ/.test(combo)) disease='臍帯炎';
+    const excluded=!hasAbx(drugText)&&!symptom.trim()&&!drip&&!blood;
+    treats.push({dateStr,disease,drug:drugText,symptom,content,drip,blood,excluded,imported:true,date:new Date(dateStr).toISOString()});
   });
-
-  return { filename, id10, id5, treats, error: null };
+  return{filename,id10,id5,treats,error:null};
 }
 
 function renderImportPreview(){
-  const wrap = document.getElementById('import-preview');
-  if(!importQueue.length){ wrap.innerHTML=''; return; }
-
-  const html = importQueue.map((item,qi)=>{
-    if(item.error){
-      return `<div class="import-row"><span style="color:var(--danger)">${item.filename}</span><span style="color:var(--danger)">${item.error}</span></div>`;
-    }
-    const validTreats = item.treats.filter(t=>!t.excluded);
-    const dripN = item.treats.filter(t=>t.drip).length;
-    const bloodN = item.treats.filter(t=>t.blood).length;
-
-    // 既存個体とのマッチング
-    const match = animals.find(a=>a.id5===item.id5);
-    const matchHtml = match
-      ? `<span style="color:var(--acc)">✓ ${match.id5} (${match.dob})</span>`
-      : `<span style="color:var(--warn)">⚠ 未登録（耳標${item.id5}）</span>`;
-
-    const flagHtml = (dripN>0?`<span class="flag flag-drip">💧点滴${dripN}件</span>`:'')
-      + (bloodN>0?`<span class="flag flag-blood">🔴輸血${bloodN}件</span>`:'');
-
-    return `
-      <div class="card-sm" style="margin-top:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:12px;font-weight:700">${item.filename}</span>
-          ${matchHtml}
-        </div>
-        <div style="font-size:11px;color:var(--text2)">
-          記録${item.treats.length}件 → カウント対象 <b>${validTreats.length}</b>件（除外${item.treats.length-validTreats.length}件）
-          ${flagHtml}
-        </div>
-        ${!match ? `
-          <div class="fld" style="margin-top:8px">
-            <label>生年月日（マスタ照合に使用）</label>
-            <input type="date" id="import-dob-${qi}" style="background:var(--surf2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;padding:7px 10px;width:100%">
-          </div>` : ''}
-        <button class="btn btn-p btn-sm" style="margin-top:8px" onclick="commitImport(${qi})">
-          ${match ? 'この個体に取り込む' : '新規登録して取り込む'}
-        </button>
-      </div>`;
+  const wrap=document.getElementById('import-preview');
+  const html=importQueue.map((item,qi)=>{
+    if(item.error) return`<div style="color:var(--danger);font-size:12px;padding:6px 0">${item.filename}: ${item.error}</div>`;
+    const valid=item.treats.filter(t=>!t.excluded).length;
+    const drip=item.treats.filter(t=>t.drip).length;
+    const blood=item.treats.filter(t=>t.blood).length;
+    const match=animals.find(a=>a.id5===item.id5);
+    return`<div class="card-sm" style="margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:12px;font-weight:700">${item.filename}</span>
+        <span style="font-size:11px;color:${match?'var(--acc)':'var(--warn)'}">${match?'✓ マッチ':'⚠ 未登録'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text2)">記録${item.treats.length}件 → カウント対象<b>${valid}</b>件 ${drip>0?`<span class="flag flag-drip">💧${drip}</span>`:''}${blood>0?`<span class="flag flag-blood">🔴輸血</span>`:''}</div>
+      ${!match?`<div class="fld" style="margin-top:8px"><label>生年月日</label><input type="date" id="idob-${qi}" style="background:var(--surf2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;padding:7px 10px;width:100%"></div>`:''}
+      <button class="btn btn-p btn-sm" style="margin-top:8px" onclick="commitImport(${qi})">${match?'この個体に取り込む':'新規登録して取り込む'}</button>
+    </div>`;
   }).join('');
-
-  wrap.innerHTML = html;
+  wrap.innerHTML=html;
 }
 
 function commitImport(qi){
-  const item = importQueue[qi];
-  if(!item || item.error) return;
-  const errEl = document.getElementById('import-err');
-  errEl.textContent = '';
-
-  let animal = animals.find(a=>a.id5===item.id5);
-
-  if(!animal){
-    // 生年月日を取得
-    const dobEl = document.getElementById(`import-dob-${qi}`);
-    const dob = dobEl ? dobEl.value : '';
-    if(!dob){ errEl.textContent=`耳標${item.id5}：生年月日を入力してください`; return; }
-    const key = animalKey(item.id5, dob);
-    animal = { key, id5:item.id5, dob, dam:'', sex:'不明', breed:'不明', birthWeight:null, dystocia:'1', birthMemo:'', birthPhotos:[null,null,null], evals:[], treats:[], followup:{}, createdAt:new Date().toISOString() };
-    animals.unshift(animal);
+  const item=importQueue[qi]; if(!item||item.error) return;
+  let a=animals.find(x=>x.id5===item.id5);
+  if(!a){
+    const dobEl=document.getElementById(`idob-${qi}`);
+    const dob=dobEl?dobEl.value:'';
+    if(!dob){document.getElementById('import-err').textContent=`耳標${item.id5}：生年月日を入力してください`;return;}
+    const key=animalKey(item.id5,dob);
+    a={key,id5:item.id5,dob,dam:'',sex:'不明',breed:'不明',birthWeight:null,dystocia:'1',birthMemo:'',birthPhotos:[null,null,null],evals:[],treats:[],followup:{},createdAt:new Date().toISOString()};
+    animals.unshift(a);
   }
-
-  if(!animal.treats) animal.treats = [];
-
-  // 日齢計算（生年月日ベース）
-  const dobDate = new Date(animal.dob);
-  let added = 0, skipped = 0, updated = 0;
-
+  if(!a.treats) a.treats=[];
+  const dobDate=new Date(a.dob); let added=0;
   item.treats.forEach(t=>{
-    const tDate = new Date(t.dateStr);
-    const age = Math.round((tDate - dobDate) / (1000*60*60*24));
-
-    // 同日・同種の重複チェック
-    const dup = animal.treats.find(ex=>ex.dateStr===t.dateStr && ex.imported);
-    if(dup){ skipped++; return; }
-
-    animal.treats.push({
-      ...t,
-      age: age >= 0 ? age : 0
-    });
+    if(a.treats.find(ex=>ex.dateStr===t.dateStr&&ex.imported)) return;
+    const age=Math.round((new Date(t.dateStr)-dobDate)/(1000*60*60*24));
+    a.treats.push({...t,age:Math.max(0,age)});
     added++;
   });
-
-  // 日付順ソート
-  animal.treats.sort((a,b)=>a.age-b.age);
+  a.treats.sort((x,y)=>x.age-y.age);
   save();
-
-  const abxN = calcAbxDays(animal.treats.filter(t=>!t.excluded));
-  const dripN = calcDripDays(animal.treats);
-  const bloodN = animal.treats.filter(t=>t.blood).length;
-
-  toast(`耳標${item.id5}：${added}件取り込み完了（抗生剤${abxN}日${dripN>0?'・点滴'+dripN+'日':''}${bloodN>0?'・輸血':''}）`);
+  toast(`耳標${item.id5}：${added}件取り込み完了`);
   renderImportPreview();
 }
 
-// ══════════════════════════════════
-// JSON インポート・マージ
-// ══════════════════════════════════
+// ══════ JSON マージ ══════
 function handleJsonImport(input){
-  const files = Array.from(input.files);
-  if(!files.length) return;
-  const resultEl = document.getElementById('json-import-result');
-  resultEl.innerHTML = '<div style="color:var(--text2)">読み込み中...</div>';
-
-  let done = 0;
-  let totalStats = { newAnimals:0, mergedAnimals:0, newEvals:0, newTreats:0, conflicts:[] };
-
+  const files=Array.from(input.files); if(!files.length) return;
+  const resultEl=document.getElementById('json-import-result');
+  resultEl.innerHTML='<div style="color:var(--text2)">読み込み中...</div>';
+  let done=0; let total={newAnimals:0,mergedAnimals:0,newEvals:0,newTreats:0,errors:[]};
   files.forEach(f=>{
-    const reader = new FileReader();
-    reader.onload = e=>{
-      try {
-        const imported = JSON.parse(e.target.result);
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const imported=JSON.parse(e.target.result);
         if(!Array.isArray(imported)) throw new Error('形式が正しくありません');
-        const stats = mergeAnimals(imported);
-        totalStats.newAnimals   += stats.newAnimals;
-        totalStats.mergedAnimals+= stats.mergedAnimals;
-        totalStats.newEvals     += stats.newEvals;
-        totalStats.newTreats    += stats.newTreats;
-        totalStats.conflicts     = totalStats.conflicts.concat(stats.conflicts);
-      } catch(err){
-        totalStats.conflicts.push(`${f.name}: ${err.message}`);
-      }
-      done++;
-      if(done === files.length){
-        save();
-        renderMergeResult(totalStats);
-        updateHeader();
-      }
+        const s=mergeAnimals(imported);
+        total.newAnimals+=s.newAnimals; total.mergedAnimals+=s.mergedAnimals;
+        total.newEvals+=s.newEvals; total.newTreats+=s.newTreats;
+      }catch(err){ total.errors.push(`${f.name}: ${err.message}`); }
+      done++; if(done===files.length){ save(); renderMergeResult(total); }
     };
     reader.readAsText(f);
   });
 }
 
 function mergeAnimals(imported){
-  const stats = { newAnimals:0, mergedAnimals:0, newEvals:0, newTreats:0, conflicts:[] };
-
-  imported.forEach(incoming=>{
-    const existing = animals.find(a=>a.key === incoming.key);
-
-    if(!existing){
-      // 新規個体：そのまま追加
-      animals.push(incoming);
-      stats.newAnimals++;
-      return;
-    }
-
-    // 既存個体とマージ
-    stats.mergedAnimals++;
-
-    // 基本情報：空欄なら相手のデータで補完
-    const basicFields = ['dam','sex','breed','birthWeight','dystocia','birthMemo'];
-    basicFields.forEach(f=>{
-      if(!existing[f] && incoming[f]) existing[f] = incoming[f];
+  const s={newAnimals:0,mergedAnimals:0,newEvals:0,newTreats:0};
+  imported.forEach(inc=>{
+    const ex=animals.find(a=>a.key===inc.key);
+    if(!ex){ animals.push(inc); s.newAnimals++; return; }
+    s.mergedAnimals++;
+    ['dam','sex','breed','birthWeight','dystocia','birthMemo'].forEach(f=>{ if(!ex[f]&&inc[f]) ex[f]=inc[f]; });
+    if(inc.birthPhotos) inc.birthPhotos.forEach((p,i)=>{ if(p&&(!ex.birthPhotos||!ex.birthPhotos[i])){ if(!ex.birthPhotos) ex.birthPhotos=[null,null,null]; ex.birthPhotos[i]=p; } });
+    (inc.evals||[]).forEach(ev=>{
+      const dup=(ex.evals||[]).find(e=>e.type===ev.type&&Math.abs(new Date(e.date)-new Date(ev.date))<1000*60*60*12);
+      if(!dup){ if(!ex.evals) ex.evals=[]; ex.evals.push(ev); s.newEvals++; }
     });
-
-    // 写真：あるものを優先（出生写真）
-    if(incoming.birthPhotos){
-      incoming.birthPhotos.forEach((p,i)=>{
-        if(p && (!existing.birthPhotos || !existing.birthPhotos[i])){
-          if(!existing.birthPhotos) existing.birthPhotos = [null,null,null];
-          existing.birthPhotos[i] = p;
-        }
-      });
-    }
-
-    // evals：日付+タイプで重複チェックして追記
-    if(incoming.evals){
-      incoming.evals.forEach(ev=>{
-        const dup = (existing.evals||[]).find(e=>
-          e.type === ev.type &&
-          Math.abs(new Date(e.date)-new Date(ev.date)) < 1000*60*60*12 // 12時間以内は重複
-        );
-        if(!dup){
-          if(!existing.evals) existing.evals = [];
-          existing.evals.push(ev);
-          stats.newEvals++;
-        }
-      });
-      // 日付順ソート
-      existing.evals.sort((a,b)=>new Date(a.date)-new Date(b.date));
-    }
-
-    // treats：dateStr+drug で重複チェックして追記
-    if(incoming.treats){
-      incoming.treats.forEach(t=>{
-        const dup = (existing.treats||[]).find(ex=>
-          ex.dateStr === t.dateStr && ex.drug === t.drug
-        ) || (existing.treats||[]).find(ex=>
-          ex.age === t.age && ex.disease === t.disease && !t.dateStr && !ex.dateStr
-        );
-        if(!dup){
-          if(!existing.treats) existing.treats = [];
-          existing.treats.push(t);
-          stats.newTreats++;
-        }
-      });
-      existing.treats.sort((a,b)=>a.age-b.age);
-    }
-
-    // followup：より新しい日付を優先
-    if(incoming.followup && incoming.followup.date){
-      const existDate = existing.followup?.date ? new Date(existing.followup.date) : new Date(0);
-      const inDate = new Date(incoming.followup.date);
-      if(inDate > existDate) existing.followup = incoming.followup;
-    }
+    ex.evals&&ex.evals.sort((a,b)=>new Date(a.date)-new Date(b.date));
+    (inc.treats||[]).forEach(t=>{
+      const dup=(ex.treats||[]).find(e=>(e.dateStr&&e.dateStr===t.dateStr&&e.drug===t.drug)||(e.age===t.age&&e.disease===t.disease&&!t.dateStr&&!e.dateStr));
+      if(!dup){ if(!ex.treats) ex.treats=[]; ex.treats.push(t); s.newTreats++; }
+    });
+    ex.treats&&ex.treats.sort((a,b)=>a.age-b.age);
+    if(inc.followup?.date){ const ed=new Date(ex.followup?.date||0); if(new Date(inc.followup.date)>ed) ex.followup=inc.followup; }
   });
-
-  // 登録日順ソート
   animals.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-  return stats;
+  return s;
 }
 
-function renderMergeResult(stats){
-  const resultEl = document.getElementById('json-import-result');
-  const conflictHtml = stats.conflicts.length
-    ? `<div style="color:var(--warn);margin-top:6px">${stats.conflicts.map(c=>`⚠ ${c}`).join('<br>')}</div>`
-    : '';
-  resultEl.innerHTML = `
-    <div style="background:var(--surf2);border-radius:8px;padding:10px;">
-      <div style="color:var(--acc);font-weight:700;margin-bottom:6px">✓ マージ完了</div>
-      <div class="row"><span>新規個体</span><span class="row-val">+${stats.newAnimals}頭</span></div>
-      <div class="row"><span>マージ（既存個体に追記）</span><span class="row-val">${stats.mergedAnimals}頭</span></div>
-      <div class="row"><span>追加された評価</span><span class="row-val">+${stats.newEvals}件</span></div>
-      <div class="row"><span>追加された治療記録</span><span class="row-val">+${stats.newTreats}件</span></div>
-      ${conflictHtml}
-    </div>`;
-  toast(`マージ完了：新規${stats.newAnimals}頭・評価+${stats.newEvals}件`);
+function renderMergeResult(s){
+  const el=document.getElementById('json-import-result');
+  el.innerHTML=`<div class="card-sm"><div style="color:var(--acc);font-weight:700;margin-bottom:6px">✓ マージ完了</div>
+    <div class="row"><span>新規個体</span><span class="row-val">+${s.newAnimals}頭</span></div>
+    <div class="row"><span>既存個体へ追記</span><span class="row-val">${s.mergedAnimals}頭</span></div>
+    <div class="row"><span>追加評価</span><span class="row-val">+${s.newEvals}件</span></div>
+    <div class="row"><span>追加治療記録</span><span class="row-val">+${s.newTreats}件</span></div>
+    ${s.errors.length?`<div style="color:var(--danger);margin-top:6px">${s.errors.join('<br>')}</div>`:''}
+  </div>`;
+  toast(`マージ完了：新規${s.newAnimals}頭・評価+${s.newEvals}件`);
+}
+
+// ══════ Excel エクスポート ══════
+function exportXlsx(){
+  const master=[['耳標','生年月日','母牛番号','性別','品種','出生体重kg','難産スコア','評価回数','抗生剤日数','点滴日数','輸血','最終ランク','離乳DG','離乳日齢','転帰']];
+  animals.forEach(a=>{
+    const last=(a.evals||[]).slice(-1)[0]; const fu=a.followup||{};
+    const t30=(a.treats||[]).filter(t=>t.age<=30);
+    master.push([a.id5,a.dob,a.dam,a.sex,a.breed,a.birthWeight||'',a.dystocia,(a.evals||[]).length,calcAbxDays(t30),calcDripDays(t30),t30.some(t=>t.blood)?'有':'',last?.rank||'',fu.dg||'',fu.weaned||'',fu.outcome||'']);
+  });
+  const evals=[['耳標','生年月日','評価タイプ','日齢','体重kg','哺乳行動','ランク','根拠・コメント','評価日時']];
+  animals.forEach(a=>{ (a.evals||[]).forEach(ev=>evals.push([a.id5,a.dob,ev.type,ev.age,ev.weight||'',ev.nursing,ev.rank||'',ev.reasoning||'',ev.date])); });
+  const treats=[['耳標','生年月日','品種','日齢','疾病区分','薬剤','点滴','輸血','処置者','取込元']];
+  animals.forEach(a=>{ (a.treats||[]).forEach(t=>treats.push([a.id5,a.dob,a.breed,t.age,t.disease,t.drug||'',t.drip?'有':'',t.blood?'有':'',t.staff||'',t.imported?'mowment':'手入力'])); });
+  const fu=[['耳標','生年月日','初回ランク','最終ランク','転帰','離乳DG','離乳日齢','メモ']];
+  animals.forEach(a=>{
+    const f=a.followup||{}; if(!f.outcome&&!f.dg) return;
+    fu.push([a.id5,a.dob,(a.evals||[])[0]?.rank||'',(a.evals||[]).slice(-1)[0]?.rank||'',f.outcome||'',f.dg||'',f.weaned||'',f.memo||'']);
+  });
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(master),'個体マスタ');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(evals),'評価記録');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(treats),'治療記録');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(fu),'予後・転帰');
+  XLSX.writeFile(wb,`子牛発育管理_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Excelをダウンロードしました');
+}
+
+function exportAnimalXlsx(key){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  const wb=XLSX.utils.book_new();
+  const info=[['項目','内容'],['耳標',a.id5],['生年月日',a.dob],['母牛番号',a.dam],['性別',a.sex],['品種',a.breed],['出生体重kg',a.birthWeight||'未測定'],['難産スコア',a.dystocia],['出生メモ',a.birthMemo||'']];
+  const fu=a.followup||{};
+  if(fu.outcome) info.push(['転帰',fu.outcome]); if(fu.dg) info.push(['離乳DG',fu.dg]); if(fu.weaned) info.push(['離乳日齢',fu.weaned]);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),'基本情報');
+  const evs=[['評価タイプ','日齢','体重kg','哺乳行動','ランク','根拠','日時']];
+  (a.evals||[]).forEach(ev=>evs.push([ev.type,ev.age,ev.weight||'',ev.nursing,ev.rank||'',ev.reasoning||'',ev.date]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(evs),'評価記録');
+  const tr=[['日齢','疾病区分','薬剤','点滴','輸血','処置者','メモ']];
+  (a.treats||[]).forEach(t=>tr.push([t.age,t.disease,t.drug,t.drip?'有':'',t.blood?'有':'',t.staff||'',t.memo||'']));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(tr),'治療記録');
+  XLSX.writeFile(wb,`子牛_${a.id5}_${a.dob}.xlsx`);
+  toast('個体Excelをダウンロードしました');
+}
+
+function exportJson(){
+  const blob=new Blob([JSON.stringify(animals,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const el=document.createElement('a'); el.href=url; el.download=`calf_${new Date().toISOString().slice(0,10)}.json`; el.click();
+  toast('JSONをエクスポートしました');
+}
+
+function clearAll(){
+  if(!confirm('全データを削除しますか？')) return;
+  animals=[]; save(); toast('削除しました');
 }
 
 init();
