@@ -187,7 +187,7 @@ textarea{resize:vertical;min-height:60px;}
       <div class="card">
         <div class="g2">
           <div class="fld"><label>耳標（下5桁）</label><input type="text" id="e-id" placeholder="12345" inputmode="numeric" maxlength="5" oninput="lookupAnimal('e-id','e-dob','e-lookup')"></div>
-          <div class="fld"><label>生年月日</label><input type="date" id="e-dob" oninput="lookupAnimal('e-id','e-dob','e-lookup')"></div>
+          <div class="fld"><label>生年月日 <span class="muted">（自動入力）</span></label><input type="date" id="e-dob" readonly style="opacity:.6;"></div>
         </div>
         <div id="e-lookup" style="font-size:12px;color:var(--acc);"></div>
       </div>
@@ -240,7 +240,7 @@ textarea{resize:vertical;min-height:60px;}
       <div class="card">
         <div class="g2">
           <div class="fld"><label>耳標（下5桁）</label><input type="text" id="t-id" placeholder="12345" inputmode="numeric" maxlength="5" oninput="lookupAnimal('t-id','t-dob','t-lookup')"></div>
-          <div class="fld"><label>生年月日</label><input type="date" id="t-dob" oninput="lookupAnimal('t-id','t-dob','t-lookup')"></div>
+          <div class="fld"><label>生年月日 <span class="muted">（自動入力）</span></label><input type="date" id="t-dob" readonly style="opacity:.6;"></div>
         </div>
         <div id="t-lookup" style="font-size:12px;color:var(--acc);"></div>
       </div>
@@ -368,6 +368,14 @@ const API = 'https://calf-api.d-masunaga30.workers.dev';
 
 // ══════ INIT ══════
 function init(){
+  // cv2からのデータ移行
+  const old = localStorage.getItem('cv2_animals');
+  const cur = localStorage.getItem('cv3_animals');
+  if(old && !cur){
+    localStorage.setItem('cv3_animals', old);
+    toast('前バージョンのデータを引き継ぎました', 3000);
+  }
+
   const a = localStorage.getItem('cv3_animals');
   if(a) animals = JSON.parse(a);
   document.getElementById('hdrDate').textContent = new Date().toLocaleDateString('ja-JP');
@@ -420,17 +428,23 @@ async function syncFromServer(){
     const serverAnimals = await res.json();
     if(!Array.isArray(serverAnimals)) throw new Error('invalid');
 
-    if(serverAnimals.length === 0 && animals.length > 0){
-      // サーバーが空でローカルにデータあり → サーバーに上げる
-      await syncToServer();
-    } else if(serverAnimals.length > 0){
-      // サーバーのデータとローカルをマージ
-      const merged = mergeAnimals(serverAnimals);
+    if(serverAnimals.length === 0){
+      // サーバーが空 → ローカルデータをサーバーに上げる（絶対に上書きしない）
+      if(animals.length > 0){
+        await syncToServer();
+      }
+    } else {
+      // サーバーにデータあり → ローカルとマージ（ローカルが勝つ）
+      const before = animals.length;
+      mergeAnimals(serverAnimals);
       saveLocal();
+      const added = animals.length - before;
+      if(added > 0) toast(`サーバーから${added}頭を取得しました`);
     }
     syncStatus='ok';
   } catch(e){
     syncStatus='error';
+    // サーバーエラーでもローカルデータは触らない
   }
   updateHeader();
 }
@@ -493,20 +507,43 @@ function renderESlot(i){
     :`<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadEvalPhoto(${i},this)"><div class="ph-ico">📷</div><div class="ph-lbl">${phLabels[i]}</div>`;
 }
 
-// ══════ LOOKUP ══════
-function lookupAnimal(idFld,dobFld,outId){
-  const id5=document.getElementById(idFld).value.trim();
-  const dob=document.getElementById(dobFld).value;
-  const el=document.getElementById(outId);
-  if(!id5){el.textContent='';return;}
-  const a=animals.find(x=>x.key===animalKey(id5,dob));
-  if(a) el.textContent=`✓ ${a.breed} | 母牛: ${a.dam||'不明'} | 出生: ${a.birthWeight||'未'}kg`;
-  else {
-    const byId=animals.filter(x=>x.id5===id5);
-    el.innerHTML=byId.length>0
-      ?`<span style="color:var(--warn)">⚠ 生年月日が一致しません（同耳標${byId.length}頭）</span>`
-      :`<span style="color:var(--text2)">未登録（先に出生登録してください）</span>`;
+// ══════ LOOKUP（生年月日自動入力・重複対応）══════
+function lookupAnimal(idFld, dobFld, outId){
+  const id5 = document.getElementById(idFld).value.trim();
+  const el  = document.getElementById(outId);
+  if(!id5){ el.innerHTML=''; return; }
+
+  const matches = animals.filter(x=>x.id5===id5);
+
+  if(matches.length === 0){
+    el.innerHTML=`<span style="color:var(--text2)">未登録（先に出生登録してください）</span>`;
+    return;
   }
+
+  if(matches.length === 1){
+    // 1件ヒット → 生年月日を自動入力
+    const a = matches[0];
+    document.getElementById(dobFld).value = a.dob;
+    el.innerHTML=`<span style="color:var(--acc)">✓ ${a.breed} | 母牛: ${a.dam||'不明'} | 出生: ${a.birthWeight||'未'}kg | ${a.dob}</span>`;
+    return;
+  }
+
+  // 複数ヒット → 候補ボタンを表示
+  const btns = matches.map(a=>`
+    <button onclick="selectAnimal('${idFld}','${dobFld}','${outId}','${a.key}')"
+      style="background:var(--surf2);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:12px;padding:6px 10px;cursor:pointer;text-align:left;width:100%;margin-bottom:4px;">
+      📅 ${a.dob} | ${a.breed} | 母牛: ${a.dam||'不明'} | 出生: ${a.birthWeight||'未'}kg
+    </button>`).join('');
+  el.innerHTML=`
+    <div style="color:var(--warn);font-size:12px;margin-bottom:6px;">⚠ 同じ耳標が${matches.length}頭います。該当個体を選んでください：</div>
+    ${btns}`;
+}
+
+function selectAnimal(idFld, dobFld, outId, key){
+  const a = animals.find(x=>x.key===key); if(!a) return;
+  document.getElementById(dobFld).value = a.dob;
+  document.getElementById(outId).innerHTML=
+    `<span style="color:var(--acc)">✓ ${a.breed} | 母牛: ${a.dam||'不明'} | 出生: ${a.birthWeight||'未'}kg | ${a.dob}</span>`;
 }
 
 // ══════ 出生登録 ══════
@@ -668,7 +705,8 @@ function showDetail(key){
   }).join('');
 
   // evals
-  const evHtml=(a.evals||[]).slice().reverse().map(ev=>{
+  const evHtml=(a.evals||[]).slice().reverse().map((ev,ri)=>{
+    const idx=(a.evals||[]).length-1-ri;
     const r=ev.rank||'−'; const rc=r==='A'?'A':r==='B'?'B':r==='C'?'C':'x';
     const d=new Date(ev.date);
     const ds=`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -676,7 +714,11 @@ function showDetail(key){
     return `<div class="card-sm">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-weight:700">${ev.type}（${ev.age}日齢）</span>
-        <span class="bdg bdg-${rc}">${r}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="bdg bdg-${rc}">${r}</span>
+          <button onclick="editEval('${a.key}',${idx})" style="background:none;border:none;color:var(--acc);font-size:12px;cursor:pointer;">編集</button>
+          <button onclick="deleteEval('${a.key}',${idx})" style="background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;">削除</button>
+        </div>
       </div>
       <div style="font-size:11px;color:var(--text2)">${ds} | ${ev.weight?ev.weight+'kg':'体重未測定'} | 哺乳:${ev.nursing||'−'}</div>
       ${phHtml?`<div style="display:flex;gap:4px;margin-top:8px;">${phHtml}</div>`:''}
@@ -690,10 +732,14 @@ function showDetail(key){
     ${dripDays>0?`<span class="flag flag-drip">💧点滴 ${dripDays}日</span>`:''}
     ${hasBlood?`<span class="flag flag-blood">🔴輸血あり</span>`:''}
   </div>`;
-  const trHtml=(a.treats||[]).map(t=>`
+  const trHtml=(a.treats||[]).map((t,ti)=>`
     <div class="treat-item">
       <div><span style="font-weight:700">${t.age}日齢</span> <span class="tag">${t.disease}</span>${t.drip?'<span class="flag flag-drip" style="padding:1px 5px;font-size:10px;">点滴</span>':''}${t.blood?'<span class="flag flag-blood" style="padding:1px 5px;font-size:10px;">輸血</span>':''}${t.imported?'<span class="tag" style="opacity:.6">mowment</span>':''}</div>
-      <div style="color:var(--text2);text-align:right;font-size:11px;">${t.drug||''}</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--text2);font-size:11px;">${t.drug||''}</span>
+        <button onclick="editTreat('${a.key}',${ti})" style="background:none;border:none;color:var(--acc);font-size:11px;cursor:pointer;">編集</button>
+        <button onclick="deleteTreat('${a.key}',${ti})" style="background:none;border:none;color:var(--danger);font-size:11px;cursor:pointer;">削除</button>
+      </div>
     </div>`).join('')||'<div style="color:var(--text2);font-size:13px;">治療記録なし</div>';
 
   // DG
@@ -710,8 +756,9 @@ function showDetail(key){
   const fu=a.followup||{};
 
   document.getElementById('detail-wrap').innerHTML=`
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <button onclick="showPg('list');renderList();document.querySelectorAll('.nb')[1].classList.add('on');" style="background:none;border:none;color:var(--acc);font-size:14px;cursor:pointer;">← 一覧</button>
+      <button onclick="editBasicInfo('${a.key}')" style="background:none;border:none;color:var(--acc);font-size:13px;cursor:pointer;">基本情報を編集</button>
     </div>
     <div class="card" style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -764,6 +811,184 @@ function deleteAnimal(key){
   animals=animals.filter(a=>a.key!==key); save();
   showPg('list'); renderList(); document.querySelectorAll('.nb')[1].classList.add('on');
   toast('削除しました');
+}
+
+// ══════ 編集機能 ══════
+
+// 基本情報編集
+function editBasicInfo(key){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  document.getElementById('detail-wrap').innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <button onclick="showDetail('${key}')" style="background:none;border:none;color:var(--acc);font-size:14px;cursor:pointer;">← 戻る</button>
+    </div>
+    <div class="sec"><div class="sec-ttl">基本情報を編集</div>
+      <div class="card">
+        <div class="g2">
+          <div class="fld"><label>耳標（下5桁）</label><input type="text" id="ei-id" value="${a.id5}" readonly style="opacity:.5;"></div>
+          <div class="fld"><label>生年月日</label><input type="date" id="ei-dob" value="${a.dob}" readonly style="opacity:.5;"></div>
+        </div>
+        <div class="g2">
+          <div class="fld"><label>母牛番号</label><input type="text" id="ei-dam" value="${a.dam||''}"></div>
+          <div class="fld"><label>性別</label>
+            <select id="ei-sex"><option value="雌" ${a.sex==='雌'?'selected':''}>雌</option><option value="雄" ${a.sex==='雄'?'selected':''}>雄</option></select>
+          </div>
+        </div>
+        <div class="fld"><label>品種</label>
+          <select id="ei-breed">
+            <option value="黒毛和種" ${a.breed==='黒毛和種'?'selected':''}>黒毛和種</option>
+            <option value="F1" ${a.breed==='F1'?'selected':''}>F1（交雑）</option>
+            <option value="ホルスタイン" ${a.breed==='ホルスタイン'?'selected':''}>ホルスタイン</option>
+            <option value="その他" ${a.breed==='その他'?'selected':''}>その他</option>
+          </select>
+        </div>
+        <div class="g2">
+          <div class="fld"><label>出生体重（kg）</label><input type="number" id="ei-bw" value="${a.birthWeight||''}" step="0.1" inputmode="decimal"></div>
+          <div class="fld"><label>難産スコア</label>
+            <select id="ei-dyst">
+              <option value="1" ${a.dystocia==='1'?'selected':''}>1: 正常</option>
+              <option value="2" ${a.dystocia==='2'?'selected':''}>2: 軽介助</option>
+              <option value="3" ${a.dystocia==='3'?'selected':''}>3: 強介助</option>
+            </select>
+          </div>
+        </div>
+        <div class="fld"><label>出生メモ</label><textarea id="ei-memo" style="min-height:48px">${a.birthMemo||''}</textarea></div>
+        <button class="btn btn-p" onclick="saveBasicInfo('${key}')">保存</button>
+      </div>
+    </div>`;
+}
+
+function saveBasicInfo(key){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  a.dam=document.getElementById('ei-dam').value.trim();
+  a.sex=document.getElementById('ei-sex').value;
+  a.breed=document.getElementById('ei-breed').value;
+  a.birthWeight=parseFloat(document.getElementById('ei-bw').value)||null;
+  a.dystocia=document.getElementById('ei-dyst').value;
+  a.birthMemo=document.getElementById('ei-memo').value.trim();
+  save(); toast('基本情報を保存しました'); showDetail(key);
+}
+
+// 評価編集
+function editEval(key, idx){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  const ev=a.evals[idx]; if(!ev) return;
+  const ranks=['A','B','C'];
+  document.getElementById('detail-wrap').innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <button onclick="showDetail('${key}')" style="background:none;border:none;color:var(--acc);font-size:14px;cursor:pointer;">← 戻る</button>
+    </div>
+    <div class="sec"><div class="sec-ttl">評価を編集（${ev.type}・${ev.age}日齢）</div>
+      <div class="card">
+        <div class="g2">
+          <div class="fld"><label>日齢</label><input type="number" id="ee-age" value="${ev.age}" inputmode="numeric"></div>
+          <div class="fld"><label>体重（kg）</label><input type="number" id="ee-wt" value="${ev.weight||''}" step="0.1" inputmode="decimal"></div>
+        </div>
+        <div class="fld"><label>哺乳行動</label>
+          <select id="ee-nursing">
+            <option value="確認" ${ev.nursing==='確認'?'selected':''}>吸乳確認あり</option>
+            <option value="不明" ${ev.nursing==='不明'?'selected':''}>不明</option>
+            <option value="未確認" ${ev.nursing==='未確認'?'selected':''}>吸乳確認なし</option>
+          </select>
+        </div>
+        <div class="fld"><label>判定ランク</label>
+          <div class="rank-btns">
+            ${['A','B','C'].map(r=>`<button class="rank-btn ${ev.rank===r?'sel-'+r:''}" id="ee-rb-${r}" onclick="selectEvalRank('${r}')">${r}</button>`).join('')}
+            <button class="rank-btn ${!ev.rank?'sel-x':''}" id="ee-rb-x" onclick="selectEvalRank('')">後で</button>
+          </div>
+        </div>
+        <div class="fld"><label>根拠・コメント</label><textarea id="ee-reasoning" style="min-height:80px">${ev.reasoning||''}</textarea></div>
+        <div class="fld"><label>メモ</label><textarea id="ee-memo" style="min-height:48px">${ev.memo||''}</textarea></div>
+        <button class="btn btn-p" onclick="saveEvalEdit('${key}',${idx})">保存</button>
+      </div>
+    </div>`;
+  window._editEvalRank = ev.rank||'';
+}
+
+function selectEvalRank(r){
+  window._editEvalRank=r;
+  ['A','B','C','x'].forEach(k=>{
+    const el=document.getElementById('ee-rb-'+k);
+    if(el) el.className='rank-btn'+(r===k||(!r&&k==='x')?' sel-'+k:'');
+  });
+}
+
+function saveEvalEdit(key, idx){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  const ev=a.evals[idx]; if(!ev) return;
+  ev.age=parseInt(document.getElementById('ee-age').value)||ev.age;
+  ev.weight=parseFloat(document.getElementById('ee-wt').value)||null;
+  ev.nursing=document.getElementById('ee-nursing').value;
+  ev.rank=window._editEvalRank||'';
+  ev.reasoning=document.getElementById('ee-reasoning').value.trim();
+  ev.memo=document.getElementById('ee-memo').value.trim();
+  ev.updatedAt=new Date().toISOString();
+  save(); toast('評価を更新しました'); showDetail(key);
+}
+
+function deleteEval(key, idx){
+  if(!confirm('この評価記録を削除しますか？')) return;
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  a.evals.splice(idx,1);
+  save(); toast('評価を削除しました'); showDetail(key);
+}
+
+// 治療編集
+function editTreat(key, idx){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  const t=a.treats[idx]; if(!t) return;
+  document.getElementById('detail-wrap').innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <button onclick="showDetail('${key}')" style="background:none;border:none;color:var(--acc);font-size:14px;cursor:pointer;">← 戻る</button>
+    </div>
+    <div class="sec"><div class="sec-ttl">治療記録を編集</div>
+      <div class="card">
+        <div class="g2">
+          <div class="fld"><label>日齢</label><input type="number" id="et-age" value="${t.age}" inputmode="numeric"></div>
+          <div class="fld"><label>疾病区分</label>
+            <select id="et-disease">
+              <option value="下痢" ${t.disease==='下痢'?'selected':''}>下痢</option>
+              <option value="肺炎" ${t.disease==='肺炎'?'selected':''}>肺炎</option>
+              <option value="臍帯炎" ${t.disease==='臍帯炎'?'selected':''}>臍帯炎</option>
+              <option value="関節炎" ${t.disease==='関節炎'?'selected':''}>関節炎</option>
+              <option value="その他" ${t.disease==='その他'?'selected':''}>その他</option>
+            </select>
+          </div>
+        </div>
+        <div class="fld"><label>薬剤・処置</label><input type="text" id="et-drug" value="${t.drug||''}"></div>
+        <div class="g2">
+          <div class="fld"><label>処置者</label><input type="text" id="et-staff" value="${t.staff||''}"></div>
+          <div class="fld" style="display:flex;flex-direction:column;gap:6px;padding-top:16px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="et-drip" style="width:auto;" ${t.drip?'checked':''}> 💧点滴</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="et-blood" style="width:auto;" ${t.blood?'checked':''}> 🔴輸血</label>
+          </div>
+        </div>
+        <div class="fld"><label>メモ</label><textarea id="et-memo" style="min-height:48px">${t.memo||''}</textarea></div>
+        <button class="btn btn-p" onclick="saveTreatEdit('${key}',${idx})">保存</button>
+      </div>
+    </div>`;
+}
+
+function saveTreatEdit(key, idx){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  const t=a.treats[idx]; if(!t) return;
+  t.age=parseInt(document.getElementById('et-age').value)||t.age;
+  t.disease=document.getElementById('et-disease').value;
+  t.drug=document.getElementById('et-drug').value.trim();
+  t.staff=document.getElementById('et-staff').value.trim();
+  t.drip=document.getElementById('et-drip').checked;
+  t.blood=document.getElementById('et-blood').checked;
+  t.memo=document.getElementById('et-memo').value.trim();
+  t.updatedAt=new Date().toISOString();
+  a.treats.sort((x,y)=>x.age-y.age);
+  save(); toast('治療記録を更新しました'); showDetail(key);
+}
+
+function deleteTreat(key, idx){
+  if(!confirm('この治療記録を削除しますか？')) return;
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  a.treats.splice(idx,1);
+  save(); toast('治療記録を削除しました'); showDetail(key);
 }
 
 // ══════ Claude分析用エクスポート ══════
