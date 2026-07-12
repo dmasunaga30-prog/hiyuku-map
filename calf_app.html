@@ -142,9 +142,10 @@ textarea{resize:vertical;min-height:60px;}
     <div class="sec"><div class="sec-ttl">個体基本情報</div>
       <div class="card">
         <div class="g2">
-          <div class="fld"><label>耳標（下5桁）</label><input type="text" id="b-id" placeholder="12345" inputmode="numeric" maxlength="5"></div>
-          <div class="fld"><label>生年月日</label><input type="date" id="b-dob"></div>
+          <div class="fld"><label>耳標（下5桁）</label><input type="text" id="b-id" placeholder="12345" inputmode="numeric" maxlength="5" oninput="birthLookup()"></div>
+          <div class="fld"><label>生年月日</label><input type="date" id="b-dob" oninput="birthLookup()"></div>
         </div>
+        <div id="b-lookup" style="font-size:12px;margin-bottom:8px;"></div>
         <div class="g2">
           <div class="fld"><label>母牛番号</label><input type="text" id="b-dam" placeholder="例: 67890"></div>
           <div class="fld"><label>性別</label><select id="b-sex"><option value="雌">雌</option><option value="雄">雄</option></select></div>
@@ -173,7 +174,7 @@ textarea{resize:vertical;min-height:60px;}
       </div>
       <div style="font-size:11px;color:var(--text2);margin-top:6px;">※JPEG/PNG/WebPのみ対応。iPhoneの方はカメラ設定→「互換性優先」に変更してください。</div>
     </div>
-    <button class="btn btn-p" onclick="saveBirth()">出生情報を登録</button>
+    <button class="btn btn-p" id="b-submit-btn" onclick="saveBirth()">出生情報を登録</button>
     <div class="err" id="b-err"></div>
   </div>
 
@@ -546,32 +547,81 @@ function selectAnimal(idFld, dobFld, outId, key){
     `<span style="color:var(--acc)">✓ ${a.breed} | 母牛: ${a.dam||'不明'} | 出生: ${a.birthWeight||'未'}kg | ${a.dob}</span>`;
 }
 
-// ══════ 出生登録 ══════
+// ══════ 出生登録（新規 & 編集兼用）══════
+let birthEditKey = null; // 編集モードのとき対象キーを保持
+
+function birthLookup(){
+  const id5 = document.getElementById('b-id').value.trim();
+  const dob  = document.getElementById('b-dob').value;
+  const el   = document.getElementById('b-lookup');
+  const btn  = document.getElementById('b-submit-btn');
+  birthEditKey = null;
+
+  if(!id5 || !dob){ el.innerHTML=''; btn.textContent='出生情報を登録'; btn.className='btn btn-p'; return; }
+
+  const key = animalKey(id5, dob);
+  const a = animals.find(x=>x.key===key);
+
+  if(a){
+    // 既存個体 → 編集モード：フォームに現在値を入れる
+    birthEditKey = key;
+    document.getElementById('b-dam').value   = a.dam||'';
+    document.getElementById('b-sex').value   = a.sex||'雌';
+    document.getElementById('b-breed').value = a.breed||'黒毛和種';
+    document.getElementById('b-bw').value    = a.birthWeight||'';
+    document.getElementById('b-dyst').value  = a.dystocia||'1';
+    document.getElementById('b-memo').value  = a.birthMemo||'';
+    // 写真も読み込む
+    bPhotos = [...(a.birthPhotos||[null,null,null])];
+    [0,1,2].forEach(renderBSlot);
+    el.innerHTML=`<span style="color:var(--warn)">✏️ 登録済み個体です。内容を変更して「更新」を押してください。</span>`;
+    btn.textContent='出生情報を更新';
+    btn.className='btn btn-w';
+  } else {
+    // 未登録 → 新規モード
+    el.innerHTML=`<span style="color:var(--acc)">✓ 新規登録</span>`;
+    btn.textContent='出生情報を登録';
+    btn.className='btn btn-p';
+  }
+}
+
 function saveBirth(){
-  const id5=document.getElementById('b-id').value.trim();
-  const dob=document.getElementById('b-dob').value;
-  const err=document.getElementById('b-err');
-  if(!id5||!dob){err.textContent='耳標と生年月日は必須です';return;}
+  const id5  = document.getElementById('b-id').value.trim();
+  const dob  = document.getElementById('b-dob').value;
+  const err  = document.getElementById('b-err');
+  if(!id5||!dob){ err.textContent='耳標と生年月日は必須です'; return; }
   err.textContent='';
-  const key=animalKey(id5,dob);
-  if(animals.find(a=>a.key===key)){err.textContent='この個体はすでに登録されています';return;}
-  animals.unshift({
-    key,id5,dob,
-    dam:document.getElementById('b-dam').value.trim(),
-    sex:document.getElementById('b-sex').value,
-    breed:document.getElementById('b-breed').value,
-    birthWeight:parseFloat(document.getElementById('b-bw').value)||null,
-    dystocia:document.getElementById('b-dyst').value,
-    birthMemo:document.getElementById('b-memo').value.trim(),
-    birthPhotos:[...bPhotos],
-    evals:[],treats:[],followup:{},
-    createdAt:new Date().toISOString()
-  });
-  save();
+
+  const fields = {
+    dam:         document.getElementById('b-dam').value.trim(),
+    sex:         document.getElementById('b-sex').value,
+    breed:       document.getElementById('b-breed').value,
+    birthWeight: parseFloat(document.getElementById('b-bw').value)||null,
+    dystocia:    document.getElementById('b-dyst').value,
+    birthMemo:   document.getElementById('b-memo').value.trim(),
+    birthPhotos: [...bPhotos],
+  };
+
+  if(birthEditKey){
+    // 編集モード：既存個体を更新
+    const a = animals.find(x=>x.key===birthEditKey);
+    if(a){ Object.assign(a, fields); save(); toast(`耳標 ${id5} を更新しました`); }
+  } else {
+    // 新規モード
+    const key = animalKey(id5, dob);
+    if(animals.find(a=>a.key===key)){ err.textContent='この個体はすでに登録されています'; return; }
+    animals.unshift({ key, id5, dob, ...fields, evals:[], treats:[], followup:{}, createdAt:new Date().toISOString() });
+    save(); toast(`耳標 ${id5} を登録しました`);
+  }
+
+  // フォームリセット
   ['b-id','b-dam','b-bw','b-memo'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('b-dob').value=new Date().toISOString().slice(0,10);
-  bPhotos=[null,null,null];[0,1,2].forEach(renderBSlot);
-  toast(`耳標 ${id5} を登録しました`);
+  document.getElementById('b-dob').value = new Date().toISOString().slice(0,10);
+  document.getElementById('b-lookup').innerHTML='';
+  document.getElementById('b-submit-btn').textContent='出生情報を登録';
+  document.getElementById('b-submit-btn').className='btn btn-p';
+  bPhotos=[null,null,null]; [0,1,2].forEach(renderBSlot);
+  birthEditKey=null;
 }
 
 // ══════ 評価保存 ══════
