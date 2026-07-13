@@ -196,9 +196,7 @@ textarea{resize:vertical;min-height:60px;}
     <div class="sec"><div class="sec-ttl">評価タイミング</div>
       <div class="eval-type-row">
         <button class="eval-type-btn on" onclick="setEvalType('7日',this)">7日齢</button>
-        <button class="eval-type-btn" onclick="setEvalType('14日',this)">14日齢</button>
-        <button class="eval-type-btn" onclick="setEvalType('30日',this)">30日齢</button>
-        <button class="eval-type-btn" onclick="setEvalType('その他',this)">その他</button>
+        <button class="eval-type-btn" onclick="setEvalType('その他',this)">その他（20日前後）</button>
       </div>
       <div class="g2">
         <div class="fld"><label>日齢</label><input type="number" id="e-age" placeholder="14" inputmode="numeric" min="1" max="90"></div>
@@ -704,39 +702,70 @@ function calcDripDays(treats){
 // ══════ 一覧 ══════
 function renderList(){
   const q=(document.getElementById('list-search').value||'').trim().toLowerCase();
-  let list=animals;
+  let list=[...animals];
   if(q) list=list.filter(a=>a.id5.includes(q)||(a.dam||'').toLowerCase().includes(q));
+
+  // 生年月日順（新しい順）
+  list.sort((a,b)=>new Date(b.dob)-new Date(a.dob));
+
   const wrap=document.getElementById('list-wrap');
   if(!list.length){wrap.innerHTML=`<div class="empty"><div class="e-ico">🐄</div><p>登録がありません</p></div>`;return;}
+
   const cnt={A:0,B:0,C:0};
   animals.forEach(a=>{const r=(a.evals||[]).slice(-1)[0]?.rank;if(r)cnt[r]++;});
-  const items=list.map(a=>{
-    const last=(a.evals||[]).slice(-1)[0];
-    const rank=last?.rank||'−';
+
+  const rows=list.map(a=>{
+    const rank=(a.evals||[]).slice(-1)[0]?.rank||'';
     const bc=rank==='A'?'bdg-A':rank==='B'?'bdg-B':rank==='C'?'bdg-C':'bdg-x';
-    const d=new Date(a.createdAt);
-    const ds=`${d.getMonth()+1}/${d.getDate()}生`;
-    const abx=calcAbxDays(a.treats||[]);
+    const ev7=(a.evals||[]).find(e=>e.type==='7日');
+    const evOther=(a.evals||[]).filter(e=>e.type!=='7日'&&e.type!=='出生');
+    const otherEv=evOther.length>0?evOther[evOther.length-1]:null;
     const drip=calcDripDays(a.treats||[]);
     const blood=(a.treats||[]).some(t=>t.blood);
-    const flags=(drip>0?'💧':'')+( blood?'🔴':'');
-    const treatStr=abx>0?` / 抗生剤${abx}日${flags}`:'';
-    return `<div class="li" onclick="showDetail('${a.key}')">
-      <div class="bdg ${bc}">${rank}</div>
-      <div class="li-info">
-        <div class="li-id">耳標 ${a.id5} <span class="muted">${a.breed}</span></div>
-        <div class="li-meta">${ds} | 母${a.dam||'不明'} | 評価${(a.evals||[]).length}回${treatStr}</div>
-      </div>
-      <div class="li-arr">›</div>
-    </div>`;
+    const flags=(drip>0?'💧':'')+(blood?'🔴':'');
+
+    return `<tr onclick="showDetail('${a.key}')" style="cursor:pointer;border-bottom:1px solid var(--border);">
+      <td style="padding:8px 6px;white-space:nowrap;">
+        <div style="font-weight:700;font-size:13px;">${a.id5}</div>
+      </td>
+      <td style="padding:8px 6px;font-size:12px;color:var(--text2);white-space:nowrap;">${a.dob||'−'}</td>
+      <td style="padding:8px 6px;text-align:center;font-size:12px;">${a.sex==='雄'?'♂':'♀'}</td>
+      <td style="padding:8px 6px;text-align:right;font-size:13px;">${a.birthWeight!=null?a.birthWeight:'−'}</td>
+      <td style="padding:8px 6px;text-align:right;font-size:13px;">${ev7?.weight!=null?ev7.weight:'−'}</td>
+      <td style="padding:8px 6px;text-align:right;font-size:12px;">
+        ${otherEv?.weight!=null
+          ?`${otherEv.weight}<br><span style="font-size:10px;color:var(--text2)">(${otherEv.age}日)</span>`
+          :'<span style="color:var(--text3)">−</span>'}
+      </td>
+      <td style="padding:8px 6px;text-align:center;">
+        ${rank?`<span class="bdg ${bc}">${rank}</span>`:'<span style="color:var(--text3);font-size:12px;">−</span>'}
+        ${flags?`<div style="font-size:10px;margin-top:2px;">${flags}</div>`:''}
+      </td>
+    </tr>`;
   }).join('');
+
   wrap.innerHTML=`
     <div class="stats">
       <div class="stat"><div class="stat-n A">${cnt.A}</div><div class="stat-l">A: 継続</div></div>
       <div class="stat"><div class="stat-n B">${cnt.B}</div><div class="stat-l">B: 要注意</div></div>
       <div class="stat"><div class="stat-n C">${cnt.C}</div><div class="stat-l">C: 移動推奨</div></div>
     </div>
-    <div class="card">${items}</div>`;
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;background:var(--surf);border-radius:var(--r);overflow:hidden;">
+        <thead>
+          <tr style="background:var(--surf2);border-bottom:2px solid var(--border2);">
+            <th style="padding:8px 6px;text-align:left;font-size:10px;color:var(--text2);font-weight:700;white-space:nowrap;">耳標</th>
+            <th style="padding:8px 6px;text-align:left;font-size:10px;color:var(--text2);font-weight:700;white-space:nowrap;">生年月日</th>
+            <th style="padding:8px 6px;text-align:center;font-size:10px;color:var(--text2);font-weight:700;">性別</th>
+            <th style="padding:8px 6px;text-align:right;font-size:10px;color:var(--text2);font-weight:700;white-space:nowrap;">出生<br>kg</th>
+            <th style="padding:8px 6px;text-align:right;font-size:10px;color:var(--text2);font-weight:700;white-space:nowrap;">7日<br>kg</th>
+            <th style="padding:8px 6px;text-align:right;font-size:10px;color:var(--text2);font-weight:700;white-space:nowrap;">その他<br>kg</th>
+            <th style="padding:8px 6px;text-align:center;font-size:10px;color:var(--text2);font-weight:700;">判定</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 // ══════ 詳細 ══════
