@@ -808,7 +808,10 @@ function showDetail(key){
   document.getElementById('detail-wrap').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <button onclick="showPg('list');renderList();document.querySelectorAll('.nb')[1].classList.add('on');" style="background:none;border:none;color:var(--acc);font-size:14px;cursor:pointer;">← 一覧</button>
-      <button onclick="editBasicInfo('${a.key}')" style="background:none;border:none;color:var(--acc);font-size:13px;cursor:pointer;">基本情報を編集</button>
+      <div style="display:flex;gap:12px;">
+        <button onclick="changeDob('${a.key}')" style="background:none;border:none;color:var(--warn);font-size:12px;cursor:pointer;">生年月日修正</button>
+        <button onclick="editBasicInfo('${a.key}')" style="background:none;border:none;color:var(--acc);font-size:13px;cursor:pointer;">基本情報を編集</button>
+      </div>
     </div>
     <div class="card" style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -864,6 +867,50 @@ function deleteAnimal(key){
 }
 
 // ══════ 編集機能 ══════
+
+// 生年月日修正
+function changeDob(key){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  document.getElementById('detail-wrap').innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <button onclick="showDetail('${key}')" style="background:none;border:none;color:var(--acc);font-size:14px;cursor:pointer;">← 戻る</button>
+    </div>
+    <div class="sec"><div class="sec-ttl">生年月日を修正</div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">
+          ⚠️ 生年月日はデータのキーです。変更すると個体IDが変わります。<br>評価・治療記録はそのまま引き継がれます。
+        </div>
+        <div class="fld">
+          <label>現在の生年月日</label>
+          <div style="font-size:16px;font-weight:700;padding:8px 0;color:var(--text2)">${a.dob}</div>
+        </div>
+        <div class="fld">
+          <label>新しい生年月日</label>
+          <input type="date" id="new-dob" value="${a.dob}">
+        </div>
+        <div id="dob-err" class="err"></div>
+        <button class="btn btn-w mt12" onclick="saveDobChange('${key}')">生年月日を変更する</button>
+      </div>
+    </div>`;
+}
+
+function saveDobChange(oldKey){
+  const a=animals.find(x=>x.key===oldKey); if(!a) return;
+  const newDob=document.getElementById('new-dob').value;
+  const errEl=document.getElementById('dob-err');
+  if(!newDob){ errEl.textContent='新しい生年月日を入力してください'; return; }
+  if(newDob===a.dob){ errEl.textContent='同じ生年月日です'; return; }
+
+  const newKey=animalKey(a.id5, newDob);
+  if(animals.find(x=>x.key===newKey)){ errEl.textContent='その生年月日の個体はすでに登録されています'; return; }
+
+  // キーを更新して新しいオブジェクトに
+  a.key=newKey;
+  a.dob=newDob;
+  save();
+  toast(`生年月日を ${newDob} に変更しました`);
+  showDetail(newKey);
+}
 
 // 基本情報編集
 function editBasicInfo(key){
