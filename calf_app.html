@@ -996,10 +996,14 @@ function saveBasicInfo(key){
 }
 
 // 評価編集
+let editEvalPhotos = [null, null, null];
+
 function editEval(key, idx){
   const a=animals.find(x=>x.key===key); if(!a) return;
   const ev=a.evals[idx]; if(!ev) return;
-  const ranks=['A','B','C'];
+  // 既存写真を読み込む
+  editEvalPhotos = [...(ev.photos||[null,null,null])];
+
   document.getElementById('detail-wrap').innerHTML=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
       <button onclick="showDetail('${key}')" style="background:none;border:none;color:var(--acc);font-size:14px;cursor:pointer;">← 戻る</button>
@@ -1017,6 +1021,13 @@ function editEval(key, idx){
             <option value="未確認" ${ev.nursing==='未確認'?'selected':''}>吸乳確認なし</option>
           </select>
         </div>
+        <div class="fld"><label>写真（追加・変更可）</label>
+          <div class="ph-grid">
+            <div class="ph-slot" id="eeslot-0">${renderEditPhotoSlot(0)}</div>
+            <div class="ph-slot" id="eeslot-1">${renderEditPhotoSlot(1)}</div>
+            <div class="ph-slot" id="eeslot-2">${renderEditPhotoSlot(2)}</div>
+          </div>
+        </div>
         <div class="fld"><label>判定ランク</label>
           <div class="rank-btns">
             ${['A','B','C'].map(r=>`<button class="rank-btn ${ev.rank===r?'sel-'+r:''}" id="ee-rb-${r}" onclick="selectEvalRank('${r}')">${r}</button>`).join('')}
@@ -1029,6 +1040,29 @@ function editEval(key, idx){
       </div>
     </div>`;
   window._editEvalRank = ev.rank||'';
+}
+
+function renderEditPhotoSlot(i){
+  const p = editEvalPhotos[i];
+  if(p) return `<img src="${p}" style="width:100%;height:100%;object-fit:cover;border-radius:9px;">
+    <button class="ph-rm" onclick="removeEditPhoto(${i})">×</button>
+    <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadEditPhoto(${i},this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;">`;
+  return `<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onchange="loadEditPhoto(${i},this)">
+    <div class="ph-ico">📷</div><div class="ph-lbl">${phLabels[i]}</div>`;
+}
+
+function loadEditPhoto(i, input){
+  readPhoto(input, b64=>{
+    editEvalPhotos[i]=b64;
+    const slot=document.getElementById('eeslot-'+i);
+    if(slot) slot.innerHTML=renderEditPhotoSlot(i);
+  });
+}
+
+function removeEditPhoto(i){
+  editEvalPhotos[i]=null;
+  const slot=document.getElementById('eeslot-'+i);
+  if(slot) slot.innerHTML=renderEditPhotoSlot(i);
 }
 
 function selectEvalRank(r){
@@ -1048,6 +1082,7 @@ function saveEvalEdit(key, idx){
   ev.rank=window._editEvalRank||'';
   ev.reasoning=document.getElementById('ee-reasoning').value.trim();
   ev.memo=document.getElementById('ee-memo').value.trim();
+  ev.photos=[...editEvalPhotos];
   ev.updatedAt=new Date().toISOString();
   save(); toast('評価を更新しました'); showDetail(key);
 }
