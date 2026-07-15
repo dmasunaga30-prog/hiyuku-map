@@ -58,7 +58,11 @@ tbody tr:last-child td{border-bottom:none}
 .bmgr-bd{padding:14px;display:none}
 .bmgr-bd.open{display:block}
 .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:8px;margin-bottom:12px}
-.bitem{background:#f8f7f2;border:1px solid #e0dfd8;border-radius:8px;padding:9px 11px;display:flex;align-items:flex-end;gap:6px}
+.bitem{background:#f8f7f2;border:1px solid #e0dfd8;border-radius:8px;padding:9px 11px;display:flex;align-items:flex-end;gap:6px;cursor:default}
+.bitem.drag-over-barn{border:2px dashed #1D9E75;background:#e8faf2}
+.bitem.dragging-barn{opacity:.4;border:2px dashed #aaa}
+.barn-drag-handle{cursor:grab;color:#bbb;font-size:16px;padding:0 2px;flex-shrink:0;align-self:center;line-height:1;user-select:none}
+.barn-drag-handle:hover{color:#888}
 .bitem input{font-size:13px;padding:4px 6px;border:1px solid #ddd;border-radius:5px;background:#fff;color:#1a1a1a}
 .bitem input:focus{outline:none;border-color:#1D9E75}
 .bitem .ni{flex:1;min-width:0}.bitem .ci2{width:58px;text-align:center;flex-shrink:0}.bitem .ci3{width:58px;text-align:center;flex-shrink:0}
@@ -1314,7 +1318,13 @@ function toggleBmgr(){
 function renderBmgr(){
   document.getElementById('bcnt').textContent=`現在 ${BARNS.length}棟`;
   document.getElementById('bgrid').innerHTML=BARNS.map((b,i)=>`
-    <div class="bitem">
+    <div class="bitem" id="bitem-${i}" draggable="true"
+      ondragstart="onBarnDragStart(event,${i})"
+      ondragend="onBarnDragEnd(event)"
+      ondragover="onBarnDragOver(event,${i})"
+      ondragleave="onBarnDragLeave(event)"
+      ondrop="onBarnDrop(event,${i})">
+      <span class="barn-drag-handle" title="ドラッグして並べ替え">⠿</span>
       <div class="ni"><div class="blbl">牛舎名</div><input type="text" value="${b.name}" style="width:100%" onchange="BARNS[${i}].name=this.value"></div>
       <div><div class="blbl">部屋数</div><input type="number" class="ci2" value="${b.penCount}" min="1" max="300" onchange="BARNS[${i}].penCount=parseInt(this.value)||1"></div>
       <div><div class="blbl">最大頭数</div><input type="number" class="ci3" value="${b.penCap}" min="1" max="20" onchange="BARNS[${i}].penCap=parseInt(this.value)||1"></div>
@@ -1326,7 +1336,7 @@ function addBarn(){
   const pen=parseInt(document.getElementById('nb-pen').value)||24;
   const cap=parseInt(document.getElementById('nb-cap').value)||6;
   if(!name){alert('牛舎名を入力してください');return;}
-  BARNS.push({id:'c'+(idCtr++),name,penCount:pen,penCap:cap});
+  BARNS.push({id:'c'+Date.now(),name,penCount:pen,penCap:cap});
   document.getElementById('nb-name').value='';
   document.getElementById('nb-pen').value='';
   document.getElementById('nb-cap').value='';
@@ -1845,6 +1855,44 @@ function doShip(){
 }
 function closeDp(){document.getElementById('dpanel').style.display='none';selKey=null;}
 
+
+// ━━━ 牛舎リスト ドラッグ並べ替え ━━━
+let _barnDragIdx = null;
+
+function onBarnDragStart(e, idx){
+  _barnDragIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', String(idx));
+  setTimeout(()=>{
+    const el = document.getElementById('bitem-'+idx);
+    if(el) el.classList.add('dragging-barn');
+  }, 0);
+}
+function onBarnDragEnd(e){
+  document.querySelectorAll('.bitem.dragging-barn,.bitem.drag-over-barn').forEach(el=>{
+    el.classList.remove('dragging-barn','drag-over-barn');
+  });
+  _barnDragIdx = null;
+}
+function onBarnDragOver(e, idx){
+  if(_barnDragIdx === null || _barnDragIdx === idx) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const el = document.getElementById('bitem-'+idx);
+  if(el) el.classList.add('drag-over-barn');
+}
+function onBarnDragLeave(e){
+  e.currentTarget.classList.remove('drag-over-barn');
+}
+function onBarnDrop(e, toIdx){
+  e.preventDefault();
+  if(_barnDragIdx === null || _barnDragIdx === toIdx) return;
+  const fromIdx = _barnDragIdx;
+  // 配列を並べ替え
+  const moved = BARNS.splice(fromIdx, 1)[0];
+  BARNS.splice(toIdx, 0, moved);
+  renderBmgr();
+}
 loadDB();
 
 // ── Excel出力 ──
@@ -2265,7 +2313,16 @@ function loadFromStorage() {
     const savedCattle = localStorage.getItem(LS_CATTLE);
     const savedBarns  = localStorage.getItem(LS_BARNS);
     if (savedCattle) { cattle = JSON.parse(savedCattle); }
-    if (savedBarns)  { BARNS  = JSON.parse(savedBarns);  }
+    if (savedBarns)  {
+      BARNS = JSON.parse(savedBarns);
+      // idCtrを既存カスタム牛舎の最大番号+1に設定（衝突防止）
+      BARNS.forEach(b=>{
+        if(b.id&&b.id.startsWith('c')){
+          const n=parseInt(b.id.slice(1));
+          if(!isNaN(n)&&n>=idCtr) idCtr=n+1;
+        }
+      });
+    }
     try { const sf=localStorage.getItem('hiyuku_feed_v1'); if(sf) feedData=JSON.parse(sf); } catch(e){}
     try { const sl=localStorage.getItem('hiyuku_loss_v1'); if(sl) lossData=JSON.parse(sl); } catch(e){}
     return !!(savedCattle || savedBarns);
