@@ -1883,12 +1883,15 @@ function onBarnDragStart(e, idx){
     const el = document.getElementById('bitem-'+idx);
     if(el) el.classList.add('dragging-barn');
   }, 0);
+  const bn = BARNS[idx] ? BARNS[idx].name : '';
+  _showTip(`${bn} を移動`, e);
 }
 function onBarnDragEnd(e){
   document.querySelectorAll('.bitem.dragging-barn,.bitem.drag-over-barn').forEach(el=>{
     el.classList.remove('dragging-barn','drag-over-barn');
   });
   _barnDragIdx = null;
+  _hideTip();
 }
 function onBarnDragOver(e, idx){
   if(_barnDragIdx === null || _barnDragIdx === idx) return;
@@ -1896,18 +1899,24 @@ function onBarnDragOver(e, idx){
   e.dataTransfer.dropEffect = 'move';
   const el = document.getElementById('bitem-'+idx);
   if(el) el.classList.add('drag-over-barn');
+  const bn = BARNS[idx] ? BARNS[idx].name : '';
+  _showTip(`${bn} の位置へ移動`, e);
 }
 function onBarnDragLeave(e){
   e.currentTarget.classList.remove('drag-over-barn');
 }
 function onBarnDrop(e, toIdx){
   e.preventDefault();
+  _hideTip();
   if(_barnDragIdx === null || _barnDragIdx === toIdx) return;
   const fromIdx = _barnDragIdx;
   // 配列を並べ替え
   const moved = BARNS.splice(fromIdx, 1)[0];
   BARNS.splice(toIdx, 0, moved);
   renderBmgr();
+  // 並べ替えを即座にマップ・保存へ反映（「適用」ボタンを押さなくても反映されるように）
+  saveToStorage();
+  renderMap();
 }
 loadDB();
 syncCheckOnLoad();
