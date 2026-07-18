@@ -291,6 +291,16 @@ tbody tr:last-child td{border-bottom:none}
 .ship-filter{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:10px 14px;background:#fff;border:1px solid #e0dfd8;border-radius:8px}
 .ship-filter label{font-size:12px;color:#666;font-weight:500}
 .ship-filter select,.ship-filter input{font-size:12px;padding:4px 7px;border:1px solid #ddd;border-radius:5px;background:#fff}
+
+/* ─── Cloudflare Workers 同期 ─── */
+#sync-bar{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#f0f8ff;border:1px solid #b8d4f0;border-radius:7px;font-size:12px;color:#2c5282;flex-shrink:0}
+#sync-bar.syncing{background:#fff8e6;border-color:#f5c842;color:#7a5c00}
+#sync-bar.ok{background:#e8faf2;border-color:#1D9E75;color:#1a6b40}
+#sync-bar.err{background:#fff0f0;border-color:#E24B4A;color:#c00}
+#sync-bar .sync-icon{font-size:14px}
+#sync-bar .sync-msg{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+#sync-bar button{padding:2px 8px;font-size:11px;border:1px solid currentColor;border-radius:4px;background:transparent;cursor:pointer;color:inherit;white-space:nowrap}
+#sync-bar button:hover{opacity:.75}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -501,6 +511,12 @@ tbody tr:last-child td{border-bottom:none}
     <button class="btn btn-sm" onclick="goPage('inp')">＋ 一括入力へ</button>
     <button class="btn btn-sm" onclick="exportExcel()" style="background:#217346;color:#fff;border-color:#155724">📊 Excel出力</button>
     <button class="btn btn-sm" onclick="printMap()" style="background:#1a5276;color:#fff;border-color:#0d3349">🖨️ 印刷</button>
+    <div id="sync-bar" title="Cloudflare Workers 同期">
+      <span class="sync-icon">☁️</span>
+      <span class="sync-msg" id="sync-msg">同期未設定</span>
+      <button onclick="syncUpload()" title="このデバイスのデータをクラウドへ">↑ 上書き保存</button>
+      <button onclick="syncDownload()" title="クラウドのデータをこのデバイスへ">↓ 復元</button>
+    </div>
   </div>
 
 
@@ -1894,6 +1910,7 @@ function onBarnDrop(e, toIdx){
   renderBmgr();
 }
 loadDB();
+syncCheckOnLoad();
 
 // ── Excel出力 ──
 function exportExcel() {
@@ -2291,6 +2308,146 @@ function clearTreat(){
   var ids=['tf-tag','tf-barn','tf-from','tf-to'];
   for(var i=0;i<ids.length;i++){var e=document.getElementById(ids[i]);if(e)e.value='';}
   renderTreatPage();
+}
+
+
+// ━━━ Cloudflare Workers 同期 ━━━
+
+// ── 設定（ここを書き換える） ──
+// Cloudflare WorkerのURLを貼り付け
+// 例: 'https://hiyuku-sync.xxxxx.workers.dev'
+const SYNC_WORKER_URL = 'https://hiyuku-sync.d-masunaga30.workers.dev';
+
+// Workerに HIYUKU_TOKEN 環境変数を設定した場合はここにも同じ値を入れる
+// 設定しなければ空文字のままでOK
+const SYNC_TOKEN = '';
+
+// ── 内部ユーティリティ ──
+function _syncHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  if (SYNC_TOKEN) h['X-Hiyuku-Token'] = SYNC_TOKEN;
+  return h;
+}
+
+function _syncBar(state, msg) {
+  const bar = document.getElementById('sync-bar');
+  const msgEl = document.getElementById('sync-msg');
+  if (!bar || !msgEl) return;
+  bar.className = state ? `sync-bar ${state}` : 'sync-bar';
+  bar.id = 'sync-bar';
+  if (state) bar.classList.add(state);
+  msgEl.textContent = msg;
+}
+
+function _syncBarInit() {
+  if (!SYNC_WORKER_URL) {
+    _syncBar('', '同期未設定');
+    return false;
+  }
+  return true;
+}
+
+/** 全データをWorkerへアップロード */
+async function syncUpload() {
+  if (!_syncBarInit()) {
+    alert('SYNC_WORKER_URL が設定されていません。\nindex.html の定数を確認してください。');
+    return;
+  }
+  if (!confirm('このデバイスのデータをクラウドへ上書き保存しますか？\n（クラウド側のデータは上書きされます）')) return;
+
+  _syncBar('syncing', '保存中...');
+  try {
+    const keys = [
+      { key: 'cattle', data: cattle },
+      { key: 'barns',  data: BARNS },
+      { key: 'feed',   data: feedData },
+      { key: 'loss',   data: lossData },
+      { key: 'uwait',  data: JSON.parse(localStorage.getItem('hiyuku_uwait_v1') || '[]') },
+    ];
+    for (const { key, data } of keys) {
+      const res = await fetch(`${SYNC_WORKER_URL}/sync/${key}`, {
+        method: 'PUT',
+        headers: _syncHeaders(),
+        body: JSON.stringify({ value: data }),
+      });
+      if (!res.ok) throw new Error(`${key}: HTTP ${res.status}`);
+    }
+    const now = new Date().toLocaleString('ja-JP');
+    _syncBar('ok', `保存済み ${now}`);
+  } catch (e) {
+    console.error('syncUpload error:', e);
+    _syncBar('err', `保存失敗: ${e.message}`);
+  }
+}
+
+/** Workerからデータをダウンロードしてローカルに反映 */
+async function syncDownload() {
+  if (!_syncBarInit()) {
+    alert('SYNC_WORKER_URL が設定されていません。\nindex.html の定数を確認してください。');
+    return;
+  }
+
+  // まず最終更新日時だけ取得して確認
+  try {
+    _syncBar('syncing', '確認中...');
+    const metaRes = await fetch(`${SYNC_WORKER_URL}/sync/cattle/meta`, { headers: _syncHeaders() });
+    const meta = await metaRes.json();
+    const updatedAt = meta.updatedAt ? new Date(meta.updatedAt).toLocaleString('ja-JP') : '不明';
+    const size = meta.size ? Math.round(meta.size / 1024) + 'KB' : '';
+
+    if (!confirm(`クラウドのデータ（${updatedAt}、${size}）を\nこのデバイスに復元しますか？\n（このデバイスの現在データは上書きされます）`)) {
+      _syncBar('', '同期キャンセル');
+      return;
+    }
+  } catch(e) {
+    if (!confirm('クラウドの日時取得に失敗しました。\n続けてデータを取得しますか？')) {
+      _syncBar('err', '確認失敗');
+      return;
+    }
+  }
+
+  _syncBar('syncing', '復元中...');
+  try {
+    const keys = ['cattle', 'barns', 'feed', 'loss', 'uwait'];
+    const results = {};
+    for (const key of keys) {
+      const res = await fetch(`${SYNC_WORKER_URL}/sync/${key}`, { headers: _syncHeaders() });
+      if (!res.ok) throw new Error(`${key}: HTTP ${res.status}`);
+      const body = await res.json();
+      results[key] = body.value;
+    }
+
+    // ローカルに反映
+    if (results.cattle !== null) cattle   = results.cattle   ?? {};
+    if (results.barns  !== null) BARNS    = results.barns    ?? [...DEFAULT_BARNS];
+    if (results.feed   !== null) feedData = results.feed     ?? {};
+    if (results.loss   !== null) lossData = results.loss     ?? [];
+    if (results.uwait  !== null) localStorage.setItem('hiyuku_uwait_v1', JSON.stringify(results.uwait ?? []));
+
+    saveToStorage();
+    renderBmgr();
+    renderMap();
+
+    const now = new Date().toLocaleString('ja-JP');
+    _syncBar('ok', `復元完了 ${now}`);
+  } catch (e) {
+    console.error('syncDownload error:', e);
+    _syncBar('err', `復元失敗: ${e.message}`);
+  }
+}
+
+/** 起動時にクラウドの最終更新日時をチェック（任意） */
+async function syncCheckOnLoad() {
+  if (!SYNC_WORKER_URL) return;
+  try {
+    const res = await fetch(`${SYNC_WORKER_URL}/sync/cattle/meta`, { headers: _syncHeaders() });
+    if (!res.ok) return;
+    const meta = await res.json();
+    if (meta.updatedAt) {
+      const d = new Date(meta.updatedAt).toLocaleString('ja-JP');
+      _syncBar('', `☁ ${d}`);
+    }
+  } catch { /* ネットワーク不可などは無視 */ }
 }
 
 // ━━━ ローカルストレージ保存・復元 ━━━
