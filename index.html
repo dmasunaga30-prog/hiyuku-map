@@ -57,15 +57,18 @@ tbody tr:last-child td{border-bottom:none}
 .bmgr-hd:hover{background:#f0efe8}
 .bmgr-bd{padding:14px;display:none}
 .bmgr-bd.open{display:block}
-.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:8px;margin-bottom:12px}
-.bitem{background:#f8f7f2;border:1px solid #e0dfd8;border-radius:8px;padding:9px 11px;display:flex;align-items:flex-end;gap:6px;cursor:default}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:12px}
+.bitem{background:#f8f7f2;border:1px solid #e0dfd8;border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;cursor:default}
 .bitem.drag-over-barn{border:2px dashed #1D9E75;background:#e8faf2}
 .bitem.dragging-barn{opacity:.4;border:2px dashed #aaa}
-.barn-drag-handle{cursor:grab;color:#bbb;font-size:16px;padding:0 2px;flex-shrink:0;align-self:center;line-height:1;user-select:none}
+.bitem-row1{display:flex;align-items:center;gap:6px}
+.bitem-row2{display:flex;gap:8px;align-items:flex-end}
+.barn-drag-handle{cursor:grab;color:#bbb;font-size:16px;padding:0 2px;flex-shrink:0;line-height:1;user-select:none}
 .barn-drag-handle:hover{color:#888}
 .bitem input{font-size:13px;padding:4px 6px;border:1px solid #ddd;border-radius:5px;background:#fff;color:#1a1a1a}
 .bitem input:focus{outline:none;border-color:#1D9E75}
-.bitem .ni{flex:1;min-width:0}.bitem .ci2{width:58px;text-align:center;flex-shrink:0}.bitem .ci3{width:58px;text-align:center;flex-shrink:0}
+.bitem-name{flex:1;min-width:0;font-weight:600}
+.bitem .ci2{width:58px;text-align:center;flex-shrink:0}.bitem .ci3{width:58px;text-align:center;flex-shrink:0}
 .blbl{font-size:10px;color:#888;margin-bottom:3px}
 .delbtn{flex-shrink:0;width:22px;height:22px;border-radius:50%;border:1px solid #ffaaaa;background:#fff;color:#c00;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .delbtn:hover{background:#fff5f5}
@@ -1340,11 +1343,15 @@ function renderBmgr(){
       ondragover="onBarnDragOver(event,${i})"
       ondragleave="onBarnDragLeave(event)"
       ondrop="onBarnDrop(event,${i})">
-      <span class="barn-drag-handle" title="ドラッグして並べ替え">⠿</span>
-      <div class="ni"><div class="blbl">牛舎名</div><input type="text" value="${b.name}" style="width:100%" onchange="BARNS[${i}].name=this.value"></div>
-      <div><div class="blbl">部屋数</div><input type="number" class="ci2" value="${b.penCount}" min="1" max="300" onchange="BARNS[${i}].penCount=parseInt(this.value)||1"></div>
-      <div><div class="blbl">最大頭数</div><input type="number" class="ci3" value="${b.penCap}" min="1" max="20" onchange="BARNS[${i}].penCap=parseInt(this.value)||1"></div>
-      <button class="delbtn" onclick="delBarn(${i})">×</button>
+      <div class="bitem-row1">
+        <span class="barn-drag-handle" title="ドラッグして並べ替え">⠿</span>
+        <input type="text" class="bitem-name" value="${b.name}" title="牛舎名" onchange="BARNS[${i}].name=this.value">
+        <button class="delbtn" onclick="delBarn(${i})">×</button>
+      </div>
+      <div class="bitem-row2">
+        <div><div class="blbl">部屋数</div><input type="number" class="ci2" value="${b.penCount}" min="1" max="300" onchange="BARNS[${i}].penCount=parseInt(this.value)||1"></div>
+        <div><div class="blbl">最大頭数</div><input type="number" class="ci3" value="${b.penCap}" min="1" max="20" onchange="BARNS[${i}].penCap=parseInt(this.value)||1"></div>
+      </div>
     </div>`).join('');
 }
 function addBarn(){
@@ -1597,9 +1604,23 @@ function renderMap(){
   document.getElementById('ms-r3').textContent=active.filter(c=>c.sickRank===3).length;
   // 出荷済みはマップから削除するためカウント不要
 
-  const customIds=BARNS.filter(b=>b.id.startsWith('c')).map(b=>b.id);
-  const secs=[...BARN_SECS];
-  if(customIds.length) secs.push({label:'追加牛舎',ids:customIds});
+  // 各牛舎がどのセクションに表示されるかを決定。
+  // 号舎・Mシリーズなど既定の牛舎はBARN_SECSの定義通り。
+  // カスタム追加した牛舎（牛舎リスト管理でドラッグ移動可能）は、
+  // BARNS配列内で最も近い前後の牛舎と同じセクションに表示することで、
+  // 並べ替えた位置がそのままマップに反映されるようにする。
+  const idToSecIdx={};
+  BARN_SECS.forEach((sec,si)=>sec.ids.forEach(id=>{ idToSecIdx[id]=si; }));
+  const barnOrder=BARNS.map(b=>b.id);
+  function secIdxFor(id){
+    if(idToSecIdx[id]!==undefined) return idToSecIdx[id];
+    const pos=barnOrder.indexOf(id);
+    for(let i=pos-1;i>=0;i--){ if(idToSecIdx[barnOrder[i]]!==undefined) return idToSecIdx[barnOrder[i]]; }
+    for(let i=pos+1;i<barnOrder.length;i++){ if(idToSecIdx[barnOrder[i]]!==undefined) return idToSecIdx[barnOrder[i]]; }
+    return BARN_SECS.length-1;
+  }
+  const secs=BARN_SECS.map(sec=>({label:sec.label,ids:[]}));
+  BARNS.forEach(b=>{ secs[secIdxFor(b.id)].ids.push(b.id); });
 
   document.getElementById('msecs').innerHTML=secs.map(sec=>{
     const visBarns=BARNS.filter(b=>sec.ids.includes(b.id));
@@ -1884,7 +1905,11 @@ function onBarnDragStart(e, idx){
     if(el) el.classList.add('dragging-barn');
   }, 0);
   const bn = BARNS[idx] ? BARNS[idx].name : '';
-  _showTip(`${bn} を移動`, e);
+  // 牛舎カードは2段組で縦に大きいため、既定のドラッグプレビューだと
+  // ツールチップと重なって読めなくなる。小さな専用のドラッグ画像に差し替える。
+  const img = _barnDragImg(bn);
+  try{ e.dataTransfer.setDragImage(img, -12, 14); }catch(err){}
+  _showTip(`${bn} を移動`, e, 24);
 }
 function onBarnDragEnd(e){
   document.querySelectorAll('.bitem.dragging-barn,.bitem.drag-over-barn').forEach(el=>{
@@ -1900,7 +1925,7 @@ function onBarnDragOver(e, idx){
   const el = document.getElementById('bitem-'+idx);
   if(el) el.classList.add('drag-over-barn');
   const bn = BARNS[idx] ? BARNS[idx].name : '';
-  _showTip(`${bn} の位置へ移動`, e);
+  _showTip(`${bn} の位置へ移動`, e, 24);
 }
 function onBarnDragLeave(e){
   e.currentTarget.classList.remove('drag-over-barn');
@@ -4619,17 +4644,35 @@ let _dragEl   = null;
   document.body.appendChild(tip);
 })();
 
-function _showTip(text, e){
+function _showTip(text, e, offset){
   const tip = document.getElementById('drag-tooltip');
   if(!tip) return;
+  const off = offset===undefined ? 14 : offset;
   tip.textContent = text;
   tip.style.display = 'block';
-  tip.style.left = (e.clientX + 14) + 'px';
-  tip.style.top  = (e.clientY + 14) + 'px';
+  tip.style.left = (e.clientX + off) + 'px';
+  tip.style.top  = (e.clientY + off) + 'px';
 }
 function _hideTip(){
   const tip = document.getElementById('drag-tooltip');
   if(tip) tip.style.display = 'none';
+}
+
+// ── 牛舎カード用の小さなドラッグ画像 ──
+// 牛舎カードは2段組で縦に大きいため、既定のドラッグプレビューを使うと
+// ツールチップと重なって読めなくなる。カーソルの外側（画面外）に
+// 小さなラベルを用意し、それをドラッグ画像として使う。
+let _barnDragImgEl = null;
+function _barnDragImg(name){
+  if(!_barnDragImgEl){
+    _barnDragImgEl = document.createElement('div');
+    _barnDragImgEl.style.cssText = 'position:fixed;top:-999px;left:-999px;padding:5px 10px;'
+      + 'background:#1D9E75;color:#fff;font-size:12px;font-weight:600;border-radius:6px;'
+      + 'white-space:nowrap;pointer-events:none;';
+    document.body.appendChild(_barnDragImgEl);
+  }
+  _barnDragImgEl.textContent = '⠿ ' + (name||'');
+  return _barnDragImgEl;
 }
 
 // ─────────────────────────────────────────
