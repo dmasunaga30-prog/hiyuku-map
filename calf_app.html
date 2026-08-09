@@ -737,6 +737,58 @@ function calcDripDays(treats){
   return days.size;
 }
 
+// ══════ 親付け適性の自動判定（4段階） ══════
+// 重症度 3:死亡 > 2:哺育移動 > 1:9号移動 > 0:親付け継続（成功）
+const WEAN_AGE = 120;
+
+function fosterResult(a){
+  const fu=a.followup||{};
+  // 死亡（最重症）
+  if(fu.outcome==='死亡') return {label:'死亡', severity:3, reason:'死亡'+(fu.cause?'（'+fu.cause+'）':''), cls:'death'};
+
+  const moves=(a.moves||[]).slice().sort((x,y)=>x.age-y.age);
+  if(moves.length===0) return {label:'データなし', severity:-1, reason:'移動履歴なし', cls:'none'};
+
+  // 親付け（または9号）到達インデックス
+  const fosterIdx=moves.findIndex(m=>m.category==='親付け'||m.category==='9号(弱牛区)');
+  if(fosterIdx<0){
+    // 親付けに到達していない
+    if(moves.some(m=>m.category==='哺育')) return {label:'哺育直行', severity:2, reason:'親付けせず哺育へ', cls:'foster'};
+    return {label:'評価中', severity:-1, reason:'親付け前', cls:'pending'};
+  }
+
+  const afterFoster=moves.slice(fosterIdx+1);
+
+  // 親付け後に哺育へ = 重症度2
+  const toFoster=afterFoster.find(m=>m.category==='哺育');
+  if(toFoster) return {label:'哺育移動', severity:2, reason:`親付け後に哺育へ（${toFoster.age}日齢）`, cls:'foster'};
+
+  // 9号入り or 親付け後に9号 = 重症度1
+  if(moves[fosterIdx].category==='9号(弱牛区)') return {label:'9号移動', severity:1, reason:'9号（弱牛区）へ', cls:'nine'};
+  const to9=afterFoster.find(m=>m.category==='9号(弱牛区)');
+  if(to9) return {label:'9号移動', severity:1, reason:`親付け後に9号へ（${to9.age}日齢）`, cls:'nine'};
+
+  // 親付け後に分娩室戻り = 失敗の一種（哺育相当の重み2として扱う：親付け不成立）
+  const back=afterFoster.find(m=>m.category==='分娩室');
+  if(back) return {label:'親付け不成立', severity:2, reason:`親付け後に分娩室へ戻り（${back.age}日齢）`, cls:'foster'};
+
+  // 移動なし → 120日齢到達判定（成功）
+  const fosterAge=moves[fosterIdx].age;
+  const daysSinceBirth = a.dob ? Math.round((Date.now()-new Date(a.dob))/(1000*60*60*24)) : 0;
+  if(daysSinceBirth>=WEAN_AGE) return {label:'親付け継続', severity:0, reason:`親付け（${fosterAge}日齢）→${WEAN_AGE}日齢まで移動なし`, cls:'success'};
+  return {label:'評価中', severity:-1, reason:`親付け中（現在${daysSinceBirth}日齢／${WEAN_AGE}日で確定）`, cls:'pending'};
+}
+
+// 重症度→表示
+function fosterStyle(cls){
+  return cls==='success'?{c:'var(--A)',ic:'✅'}
+    :cls==='nine'?{c:'var(--warn)',ic:'🟡'}
+    :cls==='foster'?{c:'#e0803a',ic:'🍼'}
+    :cls==='death'?{c:'var(--C)',ic:'☠️'}
+    :cls==='pending'?{c:'var(--text2)',ic:'⏳'}
+    :{c:'var(--text3)',ic:'−'};
+}
+
 // ══════ 一覧 ══════
 function renderList(){
   const q=(document.getElementById('list-search').value||'').trim().toLowerCase();
@@ -749,45 +801,48 @@ function renderList(){
   const wrap=document.getElementById('list-wrap');
   if(!list.length){wrap.innerHTML=`<div class="empty"><div class="e-ico">🐄</div><p>登録がありません</p></div>`;return;}
 
-  const cnt={A:0,B:0,C:0};
-  animals.forEach(a=>{const r=(a.evals||[]).slice(-1)[0]?.rank;if(r)cnt[r]++;});
+  // 親付け適性の集計（4段階）
+  const fc={'親付け継続':0,'9号移動':0,'哺育移動':0,'親付け不成立':0,'哺育直行':0,'死亡':0,'評価中':0};
+  animals.forEach(a=>{ const fr=fosterResult(a); if(fc[fr.label]!=null) fc[fr.label]++; });
+  const goodN=fc['親付け継続'];
+  const nineN=fc['9号移動'];
+  const fosterN=fc['哺育移動']+fc['哺育直行']+fc['親付け不成立'];
+  const deathN=fc['死亡'];
 
   const rows=list.map(a=>{
-    const rank=(a.evals||[]).slice(-1)[0]?.rank||'';
-    const bc=rank==='A'?'bdg-A':rank==='B'?'bdg-B':rank==='C'?'bdg-C':'bdg-x';
     const ev7=(a.evals||[]).find(e=>e.type==='7日');
     const evOther=(a.evals||[]).filter(e=>e.type!=='7日'&&e.type!=='出生');
     const otherEv=evOther.length>0?evOther[evOther.length-1]:null;
     const drip=calcDripDays(a.treats||[]);
     const blood=(a.treats||[]).some(t=>t.blood);
     const flags=(drip>0?'💧':'')+(blood?'🔴':'');
+    const abx=calcAbxDays(a.treats||[]);
+    const fr=fosterResult(a);
+    const st=fosterStyle(fr.cls);
 
     return `<tr onclick="showDetail('${a.key}')" style="cursor:pointer;border-bottom:1px solid var(--border);">
-      <td style="padding:8px 6px;white-space:nowrap;">
-        <div style="font-weight:700;font-size:13px;">${a.id5}</div>
-      </td>
+      <td style="padding:8px 6px;white-space:nowrap;"><div style="font-weight:700;font-size:13px;">${a.id5}</div></td>
       <td style="padding:8px 6px;font-size:12px;color:var(--text2);white-space:nowrap;">${a.dob||'−'}</td>
       <td style="padding:8px 6px;text-align:center;font-size:12px;">${a.sex==='雄'?'♂':'♀'}</td>
       <td style="padding:8px 6px;text-align:right;font-size:13px;">${a.birthWeight!=null?a.birthWeight:'−'}</td>
       <td style="padding:8px 6px;text-align:right;font-size:13px;">${ev7?.weight!=null?ev7.weight:'−'}</td>
-      <td style="padding:8px 6px;text-align:right;font-size:12px;">
-        ${otherEv?.weight!=null
-          ?`${otherEv.weight}<br><span style="font-size:10px;color:var(--text2)">(${otherEv.age}日)</span>`
-          :'<span style="color:var(--text3)">−</span>'}
-      </td>
+      <td style="padding:8px 6px;text-align:right;font-size:12px;">${otherEv?.weight!=null?`${otherEv.weight}<br><span style="font-size:10px;color:var(--text2)">(${otherEv.age}日)</span>`:'<span style="color:var(--text3)">−</span>'}</td>
+      <td style="padding:8px 6px;text-align:center;font-size:12px;">${abx>0?abx:'−'}</td>
       <td style="padding:8px 6px;text-align:center;">
-        ${rank?`<span class="bdg ${bc}">${rank}</span>`:'<span style="color:var(--text3);font-size:12px;">−</span>'}
+        <span style="color:${st.c};font-size:13px;">${st.ic}</span>
         ${flags?`<div style="font-size:10px;margin-top:2px;">${flags}</div>`:''}
       </td>
     </tr>`;
   }).join('');
 
   wrap.innerHTML=`
-    <div class="stats">
-      <div class="stat"><div class="stat-n A">${cnt.A}</div><div class="stat-l">A: 継続</div></div>
-      <div class="stat"><div class="stat-n B">${cnt.B}</div><div class="stat-l">B: 要注意</div></div>
-      <div class="stat"><div class="stat-n C">${cnt.C}</div><div class="stat-l">C: 移動推奨</div></div>
+    <div class="stats" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat"><div class="stat-n" style="color:var(--A)">${goodN}</div><div class="stat-l">✅親付け継続</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--warn)">${nineN}</div><div class="stat-l">🟡9号</div></div>
+      <div class="stat"><div class="stat-n" style="color:#e0803a">${fosterN}</div><div class="stat-l">🍼哺育</div></div>
+      <div class="stat"><div class="stat-n" style="color:var(--C)">${deathN}</div><div class="stat-l">☠️死亡</div></div>
     </div>
+    <button class="btn btn-o btn-sm" style="width:100%;margin-bottom:12px;" onclick="showComparison()">📊 転帰別の特徴を比較</button>
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;background:var(--surf);border-radius:var(--r);overflow:hidden;">
         <thead>
@@ -798,12 +853,80 @@ function renderList(){
             <th style="padding:8px 6px;text-align:right;font-size:10px;color:var(--text2);font-weight:700;white-space:nowrap;">出生<br>kg</th>
             <th style="padding:8px 6px;text-align:right;font-size:10px;color:var(--text2);font-weight:700;white-space:nowrap;">7日<br>kg</th>
             <th style="padding:8px 6px;text-align:right;font-size:10px;color:var(--text2);font-weight:700;white-space:nowrap;">その他<br>kg</th>
-            <th style="padding:8px 6px;text-align:center;font-size:10px;color:var(--text2);font-weight:700;">判定</th>
+            <th style="padding:8px 6px;text-align:center;font-size:10px;color:var(--text2);font-weight:700;white-space:nowrap;">抗生<br>剤</th>
+            <th style="padding:8px 6px;text-align:center;font-size:10px;color:var(--text2);font-weight:700;">適性</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+}
+
+// ══════ 成功群 vs 失敗群の特徴比較 ══════
+function showComparison(){
+  // 転帰別グループ（重症度順）
+  const groups=[
+    {name:'✅親付け継続', color:'var(--A)', filter:a=>fosterResult(a).label==='親付け継続'},
+    {name:'🟡9号移動', color:'var(--warn)', filter:a=>fosterResult(a).label==='9号移動'},
+    {name:'🍼哺育', color:'#e0803a', filter:a=>['哺育移動','哺育直行','親付け不成立'].includes(fosterResult(a).label)},
+    {name:'☠️死亡', color:'var(--C)', filter:a=>fosterResult(a).label==='死亡'},
+  ];
+
+  function stats(group){
+    if(group.length===0) return null;
+    const avg=(arr)=>{const v=arr.filter(x=>x!=null&&!isNaN(x));return v.length?(v.reduce((s,x)=>s+x,0)/v.length):null;};
+    const dgOf=(a)=>{const lw=(a.evals||[]).slice().reverse().find(e=>e.weight);return(a.birthWeight&&lw)?(lw.weight-a.birthWeight)/lw.age:null;};
+    return {
+      n:group.length,
+      birthWt:avg(group.map(a=>a.birthWeight)),
+      dg:avg(group.map(dgOf)),
+      abx:avg(group.map(a=>calcAbxDays(a.treats||[]))),
+      support:avg(group.map(a=>calcSupportDays(a.treats||[]))),
+      dystocia:avg(group.map(a=>parseFloat(a.dystocia)||1)),
+      pneumonia:group.filter(a=>(a.treats||[]).some(t=>t.disease==='肺炎')).length/group.length*100,
+      drip:group.filter(a=>calcDripDays(a.treats||[])>0).length/group.length*100
+    };
+  }
+  const fmt=(v,d=2)=>v==null?'−':v.toFixed(d);
+  const gstats=groups.map(g=>({...g, s:stats(animals.filter(g.filter))}));
+  const anyData=gstats.some(g=>g.s);
+
+  const metricRow=(label,key,d,unit='')=>`
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:7px 6px;font-size:12px;white-space:nowrap;">${label}</td>
+      ${gstats.map(g=>`<td style="padding:7px 6px;text-align:right;font-size:12px;color:${g.color};font-weight:700;">${g.s?fmt(g.s[key],d):'−'}${g.s&&g.s[key]!=null?unit:''}</td>`).join('')}
+    </tr>`;
+
+  const body = !anyData ? '<div style="color:var(--text2);padding:20px;text-align:center;">まだ転帰が確定した個体がありません。120日齢到達を待つか、移動履歴・転帰を入力してください。</div>' : `
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;min-width:400px;">
+      <thead><tr style="background:var(--surf2);">
+        <th style="padding:7px 6px;text-align:left;font-size:10px;color:var(--text2);">指標</th>
+        ${gstats.map(g=>`<th style="padding:7px 6px;text-align:right;font-size:10px;color:${g.color};white-space:nowrap;">${g.name}<br>(${g.s?g.s.n:0})</th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${metricRow('出生体重','birthWt',1,'kg')}
+        ${metricRow('DG','dg',3)}
+        ${metricRow('抗生剤日数','abx',1,'日')}
+        ${metricRow('サポート日数','support',1,'日')}
+        ${metricRow('難産スコア','dystocia',2)}
+        ${metricRow('肺炎既往率','pneumonia',0,'%')}
+        ${metricRow('点滴実施率','drip',0,'%')}
+      </tbody>
+    </table>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-top:12px;line-height:1.6;">
+      左（親付け継続）から右（死亡）に向かって重症度が上がります。列をまたいで値が変化する指標が、親付け適性の判断材料になります。データが増えるほど傾向がはっきりします。
+    </div>`;
+
+  document.getElementById('detail-wrap').innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <button onclick="showPg('list');renderList();document.querySelectorAll('.nb')[1].classList.add('on');" style="background:none;border:none;color:var(--acc);font-size:14px;cursor:pointer;">← 一覧</button>
+    </div>
+    <div class="sec"><div class="sec-ttl">転帰別の特徴比較</div>
+      <div class="card">${body}</div>
+    </div>`;
+  showPg('detail');
 }
 
 // ══════ 詳細 ══════
@@ -910,6 +1033,7 @@ function showDetail(key){
         </div>
         <div class="bdg bdg-birth">出生${a.birthWeight?a.birthWeight+'kg':''}</div>
       </div>${dgHtml}
+      ${(()=>{const fr=fosterResult(a);const c=fr.cls==='success'?'var(--A)':fr.cls==='fail'?'var(--C)':fr.cls==='foster'?'var(--warn)':'var(--text2)';const ic=fr.cls==='success'?'✅':fr.cls==='fail'?'❌':fr.cls==='foster'?'🍼':fr.cls==='pending'?'⏳':'';return fr.label!=='データなし'?`<div style="margin-top:8px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;font-size:12px;border-left:3px solid ${c};"><b style="color:${c}">${ic} 親付け適性：${fr.label}</b><br><span style="color:var(--text2);font-size:11px">${fr.reason}</span></div>`:'';})()}
       ${fu.outcome==='死亡'&&fu.cause?`<div style="margin-top:8px;padding:8px;background:rgba(224,85,85,.1);border-radius:6px;font-size:12px;"><b>死因:</b> ${fu.cause}${fu.deathDate?` <span style="color:var(--text2)">（${fu.deathDate}）</span>`:''}</div>`:''}
     </div>
 
@@ -1427,10 +1551,14 @@ function parseMowmentBulk(rows, filename){
 function classifyRoom(room){
   const r=(room||'').trim();
   if(!r) return null;
-  if(r.includes('9親')||r.includes('9維持')||r.includes('９親')||r.includes('９維持')) return '9号(弱牛区)';
-  if(r.includes('親')||r.includes('維持')) return '親付け';
+  // 9号（弱牛区）：9親/9維（維持の略含む）
+  if(/[9９]\s*(親|維)/.test(r)) return '9号(弱牛区)';
+  // 親付け：「親」または「維」（維持の略）を含む
+  if(r.includes('親')||r.includes('維')) return '親付け';
+  // 哺育：哺育・ロボット・D-数字
   if(r.includes('哺育')||r.includes('ロボット')||/^D-?\d/.test(r)) return '哺育';
-  if(/^[A-IＡ-Ｉ]$/.test(r)) return '分娩室';
+  // 分娩室：A〜I（半角・全角・ローマ数字Ⅰ〜Ⅸ）
+  if(/^[A-IＡ-Ｉ]$/.test(r)||/^[ⅠⅡⅢⅣⅤⅥⅦⅧⅨ]$/.test(r)) return '分娩室';
   return 'その他';
 }
 
@@ -1654,12 +1782,12 @@ function renderMergeResult(s){
 
 // ══════ Excel エクスポート ══════
 function exportXlsx(){
-  const master=[['耳標','生年月日','母牛番号','性別','品種','出生体重kg','難産スコア','評価回数','抗生剤日数','サポート日数','点滴日数','輸血','移動回数','最終ランク','離乳DG','離乳日齢','転帰','死因']];
+  const master=[['耳標','生年月日','母牛番号','性別','品種','出生体重kg','難産スコア','評価回数','抗生剤日数','サポート日数','点滴日数','輸血','移動回数','親付け適性','最終ランク','離乳DG','離乳日齢','転帰','死因']];
   animals.forEach(a=>{
     const last=(a.evals||[]).slice(-1)[0]; const fu=a.followup||{};
     const t30=(a.treats||[]).filter(t=>t.age<=30);
     const moveCount=(a.moves||[]).length>0?(a.moves.length-1):0;
-    master.push([a.id5,a.dob,a.dam,a.sex,a.breed,a.birthWeight||'',a.dystocia,(a.evals||[]).length,calcAbxDays(t30),calcSupportDays(t30),calcDripDays(t30),t30.some(t=>t.blood)?'有':'',moveCount,last?.rank||'',fu.dg||'',fu.weaned||'',fu.outcome||'',fu.cause||'']);
+    master.push([a.id5,a.dob,a.dam,a.sex,a.breed,a.birthWeight||'',a.dystocia,(a.evals||[]).length,calcAbxDays(t30),calcSupportDays(t30),calcDripDays(t30),t30.some(t=>t.blood)?'有':'',moveCount,fosterResult(a).label,last?.rank||'',fu.dg||'',fu.weaned||'',fu.outcome||'',fu.cause||'']);
   });
   const evals=[['耳標','生年月日','評価タイプ','日齢','体重kg','哺乳行動','ランク','根拠・コメント','評価日時']];
   animals.forEach(a=>{ (a.evals||[]).forEach(ev=>evals.push([a.id5,a.dob,ev.type,ev.age,ev.weight||'',ev.nursing,ev.rank||'',ev.reasoning||'',ev.date])); });
