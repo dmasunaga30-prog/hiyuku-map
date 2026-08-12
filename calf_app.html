@@ -291,6 +291,14 @@ textarea{resize:vertical;min-height:60px;}
     </div>
   </div>
 
+  <div class="sec"><div class="sec-ttl">写真の軽量化</div>
+    <div class="card">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">既存の写真を圧縮してデータを軽くします。同期が失敗する場合はこれを実行してください。</div>
+      <button class="btn btn-w" onclick="compressAllPhotos()">🗜 既存写真をまとめて圧縮</button>
+      <div id="compress-status" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
+    </div>
+  </div>
+
   <div class="sec"><div class="sec-ttl">Claude分析用エクスポート</div>
     <div class="claude-banner" style="margin-bottom:10px;">
       <div class="claude-banner-title">📤 使い方</div>
@@ -414,19 +422,31 @@ function updateHeader(){
 }
 
 // ══════ SERVER SYNC ══════
+// 書き込み前に必ずサーバーとマージ（他デバイスの新規データを消さない）
 async function syncToServer(){
   syncStatus='syncing'; updateHeader();
   try{
+    // まずサーバーの現状を取得してマージ（ローカル優先だが他デバイス分も保持）
+    try{
+      const g=await fetch(API+'/animals');
+      if(g.ok){
+        const srv=await g.json();
+        if(Array.isArray(srv)&&srv.length>0){ mergeAnimals(srv); saveLocal(); }
+      }
+    }catch(_){/* 取得失敗は無視してローカルを送る */}
+
+    const body=JSON.stringify(animals);
     const res = await fetch(API+'/animals', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(animals)
+      body
     });
-    if(!res.ok) throw new Error('save failed');
+    if(!res.ok) throw new Error('HTTP '+res.status);
     syncStatus='ok';
   } catch(e){
     syncStatus='error';
-    toast('⚠️ サーバー保存失敗（ローカルには保存済み）', 3000);
+    const mb=(JSON.stringify(animals).length/1024/1024).toFixed(1);
+    toast(`⚠️ サーバー保存失敗（${mb}MB）ローカルには保存済み`, 3500);
   }
   updateHeader();
 }
@@ -440,12 +460,8 @@ async function syncFromServer(){
     if(!Array.isArray(serverAnimals)) throw new Error('invalid');
 
     if(serverAnimals.length === 0){
-      // サーバーが空 → ローカルデータをサーバーに上げる（絶対に上書きしない）
-      if(animals.length > 0){
-        await syncToServer();
-      }
+      if(animals.length > 0) await syncToServer();
     } else {
-      // サーバーにデータあり → ローカルとマージ（ローカルが勝つ）
       const before = animals.length;
       mergeAnimals(serverAnimals);
       saveLocal();
@@ -501,10 +517,73 @@ function readPhoto(input,cb){
   if(!['image/jpeg','image/png','image/webp'].includes(f.type)){
     toast('JPEG/PNG/WebPのみ対応しています。iPhoneはカメラ設定→「互換性優先」に変更してください。',4000); return;
   }
-  const r=new FileReader(); r.onload=e=>cb(e.target.result); r.readAsDataURL(f);
+  // 圧縮：幅800px・JPEG品質0.7にリサイズ（同期の重さ対策）
+  const r=new FileReader();
+  r.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const maxW=800;
+      const scale=Math.min(1, maxW/img.width);
+      const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL('image/jpeg',0.7);
+      cb(compressed);
+    };
+    img.onerror=()=>cb(e.target.result); // 失敗時は元データ
+    img.src=e.target.result;
+  };
+  r.readAsDataURL(f);
 }
 function loadBirthPhoto(i,input){ readPhoto(input,b64=>{bPhotos[i]=b64;renderBSlot(i);}); }
 function loadEvalPhoto(i,input){ readPhoto(input,b64=>{ePhotos[i]=b64;renderESlot(i);}); }
+
+// 既存のBase64画像を圧縮
+function compressDataUrl(dataUrl){
+  return new Promise(resolve=>{
+    if(!dataUrl||!dataUrl.startsWith('data:image')){ resolve(dataUrl); return; }
+    const img=new Image();
+    img.onload=()=>{
+      const maxW=800;
+      const scale=Math.min(1, maxW/img.width);
+      const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL('image/jpeg',0.7));
+    };
+    img.onerror=()=>resolve(dataUrl);
+    img.src=dataUrl;
+  });
+}
+
+async function compressAllPhotos(){
+  const st=document.getElementById('compress-status');
+  st.textContent='圧縮中...';
+  let before=JSON.stringify(animals).length;
+  let count=0;
+  for(const a of animals){
+    if(a.birthPhotos){
+      for(let i=0;i<a.birthPhotos.length;i++){
+        if(a.birthPhotos[i]){ a.birthPhotos[i]=await compressDataUrl(a.birthPhotos[i]); count++; }
+      }
+    }
+    for(const ev of (a.evals||[])){
+      if(ev.photos){
+        for(let i=0;i<ev.photos.length;i++){
+          if(ev.photos[i]){ ev.photos[i]=await compressDataUrl(ev.photos[i]); count++; }
+        }
+      }
+    }
+  }
+  let after=JSON.stringify(animals).length;
+  saveLocal();
+  await syncToServer();
+  st.innerHTML=`✓ ${count}枚を圧縮：${(before/1024/1024).toFixed(1)}MB → <b>${(after/1024/1024).toFixed(1)}MB</b>`;
+  toast(`写真${count}枚を圧縮しました`);
+}
 function renderBSlot(i){
   const s=document.getElementById('bslot-'+i);
   s.innerHTML=bPhotos[i]
