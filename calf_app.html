@@ -401,7 +401,7 @@ function init(){
   const today = new Date().toISOString().slice(0,10);
   ['b-dob','e-dob','t-dob'].forEach(id=>document.getElementById(id).value=today);
   updateHeader();
-  // サーバーから最新データを取得
+  // サーバーから最新データを取得（個体ごと）
   syncFromServer();
 }
 
@@ -410,9 +410,34 @@ function saveLocal(){
   updateHeader();
 }
 
+// 個体の写真をテキストデータから分離して取り出す
+function extractPhotos(a){
+  const photos={};
+  if(a.birthPhotos) photos.birth=[...a.birthPhotos];
+  (a.evals||[]).forEach((ev,i)=>{ if(ev.photos&&ev.photos.some(Boolean)) photos['eval'+i]=[...ev.photos]; });
+  return photos;
+}
+// 写真をテキストデータに戻す
+function attachPhotos(a, photos){
+  if(!photos) return;
+  if(photos.birth) a.birthPhotos=photos.birth;
+  Object.keys(photos).forEach(k=>{
+    if(k.startsWith('eval')){ const i=parseInt(k.slice(4)); if(a.evals&&a.evals[i]) a.evals[i].photos=photos[k]; }
+  });
+}
+
 async function save(){
   saveLocal();
   await syncToServer();
+}
+
+// 個体の内容ハッシュ（変更検出用）
+let lastSyncedHash = {}; // key -> hash
+function animalHash(a){
+  // 写真含む全内容を文字列化して長さ＋簡易ハッシュ
+  const s=JSON.stringify(a);
+  let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; }
+  return s.length+':'+h;
 }
 
 function updateHeader(){
@@ -421,32 +446,36 @@ function updateHeader(){
   document.getElementById('hdrSub').textContent=`${n}頭登録 / 評価${ev}件 ${syncIcon}`;
 }
 
-// ══════ SERVER SYNC ══════
-// 書き込み前に必ずサーバーとマージ（他デバイスの新規データを消さない）
+// ══════ SERVER SYNC（個体ごと分割保存）══════
+// 1個体を保存（テキスト＋写真を分離してPOST）
+async function pushAnimal(a){
+  const photos=extractPhotos(a);
+  const clean={...a};
+  clean.birthPhotos=undefined;
+  clean.evals=(a.evals||[]).map(ev=>({...ev, photos:undefined}));
+  clean._photos = Object.keys(photos).length>0 ? photos : null;
+  const res=await fetch(API+'/animal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(clean)});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+}
+
 async function syncToServer(){
   syncStatus='syncing'; updateHeader();
   try{
-    // まずサーバーの現状を取得してマージ（ローカル優先だが他デバイス分も保持）
-    try{
-      const g=await fetch(API+'/animals');
-      if(g.ok){
-        const srv=await g.json();
-        if(Array.isArray(srv)&&srv.length>0){ mergeAnimals(srv); saveLocal(); }
+    // 内容が変わった個体だけ送る（自動変更検出）
+    let pushed=0;
+    for(const a of animals){
+      const h=animalHash(a);
+      if(lastSyncedHash[a.key]!==h){
+        await pushAnimal(a);
+        lastSyncedHash[a.key]=h;
+        pushed++;
       }
-    }catch(_){/* 取得失敗は無視してローカルを送る */}
-
-    const body=JSON.stringify(animals);
-    const res = await fetch(API+'/animals', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    }
     syncStatus='ok';
+    if(pushed>3) toast(`${pushed}頭を同期しました`);
   } catch(e){
     syncStatus='error';
-    const mb=(JSON.stringify(animals).length/1024/1024).toFixed(1);
-    toast(`⚠️ サーバー保存失敗（${mb}MB）ローカルには保存済み`, 3500);
+    toast(`⚠️ サーバー保存失敗：${e.message}（ローカルには保存済み）`, 3500);
   }
   updateHeader();
 }
@@ -454,27 +483,70 @@ async function syncToServer(){
 async function syncFromServer(){
   try{
     syncStatus='syncing'; updateHeader();
-    const res = await fetch(API+'/animals');
-    if(!res.ok) throw new Error('fetch failed');
-    const serverAnimals = await res.json();
-    if(!Array.isArray(serverAnimals)) throw new Error('invalid');
-
-    if(serverAnimals.length === 0){
-      if(animals.length > 0) await syncToServer();
-    } else {
-      const before = animals.length;
-      mergeAnimals(serverAnimals);
-      saveLocal();
-      const added = animals.length - before;
-      if(added > 0) toast(`サーバーから${added}頭を取得しました`);
+    // 新API（個体ごと）を試す
+    const kr=await fetch(API+'/keys');
+    if(kr.ok){
+      const {keys}=await kr.json();
+      if(Array.isArray(keys)){
+        // サーバーが空なら旧APIから移行
+        if(keys.length===0){
+          await migrateFromLegacy();
+        }
+        // 各個体を取得（写真込み）
+        const serverAnimals=[];
+        for(const key of keys){
+          try{
+            const r=await fetch(API+'/animal?key='+encodeURIComponent(key)+'&photos=1');
+            if(r.ok){
+              const a=await r.json();
+              if(a._photos){ attachPhotos(a, a._photos); delete a._photos; }
+              serverAnimals.push(a);
+              lastSyncedHash[a.key]=animalHash(a);
+            }
+          }catch(_){}
+        }
+        if(serverAnimals.length>0){
+          const before=animals.length;
+          mergeAnimals(serverAnimals);
+          saveLocal();
+          const added=animals.length-before;
+          if(added>0) toast(`サーバーから${added}頭を取得しました`);
+        } else if(animals.length>0){
+          // サーバー空・ローカルあり → 全部アップ
+          await syncToServer();
+        }
+        syncStatus='ok'; updateHeader(); return;
+      }
     }
-    syncStatus='ok';
+    throw new Error('keys API unavailable');
   } catch(e){
-    syncStatus='error';
-    // サーバーエラーでもローカルデータは触らない
+    // 新APIが未対応なら旧APIにフォールバック
+    try{
+      const res=await fetch(API+'/animals');
+      if(res.ok){
+        const srv=await res.json();
+        if(Array.isArray(srv)&&srv.length>0){ mergeAnimals(srv); saveLocal(); }
+      }
+      syncStatus='ok';
+    }catch(_){ syncStatus='error'; }
   }
   updateHeader();
 }
+
+// 旧API（全頭まとめ）→ 新API（個体ごと）への移行
+async function migrateFromLegacy(){
+  try{
+    const res=await fetch(API+'/animals');
+    if(!res.ok) return;
+    const legacy=await res.json();
+    if(Array.isArray(legacy)&&legacy.length>0){
+      mergeAnimals(legacy); saveLocal();
+      toast(`旧データ${legacy.length}頭を新方式に移行中...`, 3000);
+      // 移行後すぐアップロード（次のsyncToServerで全頭pushされる）
+    }
+  }catch(_){}
+}
+
 function toast(msg,dur=2500){
   const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),dur);
@@ -522,14 +594,14 @@ function readPhoto(input,cb){
   r.onload=e=>{
     const img=new Image();
     img.onload=()=>{
-      const maxW=800;
+      const maxW=640;
       const scale=Math.min(1, maxW/img.width);
       const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
       const canvas=document.createElement('canvas');
       canvas.width=w; canvas.height=h;
       const ctx=canvas.getContext('2d');
       ctx.drawImage(img,0,0,w,h);
-      const compressed=canvas.toDataURL('image/jpeg',0.7);
+      const compressed=canvas.toDataURL("image/jpeg",0.6);
       cb(compressed);
     };
     img.onerror=()=>cb(e.target.result); // 失敗時は元データ
@@ -546,13 +618,13 @@ function compressDataUrl(dataUrl){
     if(!dataUrl||!dataUrl.startsWith('data:image')){ resolve(dataUrl); return; }
     const img=new Image();
     img.onload=()=>{
-      const maxW=800;
+      const maxW=640;
       const scale=Math.min(1, maxW/img.width);
       const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
       const canvas=document.createElement('canvas');
       canvas.width=w; canvas.height=h;
       canvas.getContext('2d').drawImage(img,0,0,w,h);
-      resolve(canvas.toDataURL('image/jpeg',0.7));
+      resolve(canvas.toDataURL("image/jpeg",0.6));
     };
     img.onerror=()=>resolve(dataUrl);
     img.src=dataUrl;
@@ -1176,9 +1248,13 @@ function saveFollowup(key){
   };
   save(); toast('予後を保存しました'); showDetail(key);
 }
-function deleteAnimal(key){
+async function deleteAnimal(key){
   if(!confirm('この個体の全データを削除しますか？')) return;
-  animals=animals.filter(a=>a.key!==key); save();
+  animals=animals.filter(a=>a.key!==key);
+  delete lastSyncedHash[key];
+  saveLocal();
+  // サーバーからも削除
+  try{ await fetch(API+'/animal?key='+encodeURIComponent(key),{method:'DELETE'}); }catch(_){}
   showPg('list'); renderList(); document.querySelectorAll('.nb')[1].classList.add('on');
   toast('削除しました');
 }
