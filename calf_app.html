@@ -440,9 +440,11 @@ function animalHash(a){
   return s.length+':'+h;
 }
 
+let pendingCount=0;
 function updateHeader(){
   const n=animals.length, ev=animals.flatMap(a=>a.evals||[]).length;
-  const syncIcon = syncStatus==='syncing'?'🔄':syncStatus==='ok'?'☁️':syncStatus==='error'?'⚠️':'';
+  let syncIcon = syncStatus==='syncing'?'🔄':syncStatus==='ok'?'☁️':syncStatus==='error'?'⚠️':'';
+  if(syncStatus==='error'&&pendingCount>0) syncIcon=`⚠️未同期${pendingCount}頭`;
   document.getElementById('hdrSub').textContent=`${n}頭登録 / 評価${ev}件 ${syncIcon}`;
 }
 
@@ -454,29 +456,54 @@ async function pushAnimal(a){
   clean.birthPhotos=undefined;
   clean.evals=(a.evals||[]).map(ev=>({...ev, photos:undefined}));
   clean._photos = Object.keys(photos).length>0 ? photos : null;
-  const res=await fetch(API+'/animal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(clean)});
-  if(!res.ok) throw new Error('HTTP '+res.status);
+  // リトライ最大3回
+  let lastErr;
+  for(let attempt=0; attempt<3; attempt++){
+    try{
+      const res=await fetch(API+'/animal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(clean)});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return true;
+    }catch(e){
+      lastErr=e;
+      await new Promise(r=>setTimeout(r, 500*(attempt+1))); // 0.5s,1s,1.5s待ってリトライ
+    }
+  }
+  throw lastErr;
 }
 
+let syncInFlight=false;
 async function syncToServer(){
+  if(syncInFlight) return; // 二重実行防止
+  syncInFlight=true;
   syncStatus='syncing'; updateHeader();
-  try{
-    // 内容が変わった個体だけ送る（自動変更検出）
-    let pushed=0;
-    for(const a of animals){
-      const h=animalHash(a);
-      if(lastSyncedHash[a.key]!==h){
-        await pushAnimal(a);
-        lastSyncedHash[a.key]=h;
-        pushed++;
-      }
+
+  // 送るべき個体＝内容が変わった個体（前回失敗分も lastSyncedHash が古いので自動的に対象になる）
+  const failed=[];
+  let pushed=0;
+  for(const a of animals){
+    const h=animalHash(a);
+    if(lastSyncedHash[a.key]===h) continue; // 変更なし＝送信済み
+    try{
+      await pushAnimal(a);
+      lastSyncedHash[a.key]=h;
+      pushed++;
+    }catch(e){
+      failed.push(a.key); // この個体は失敗、hashは更新しない→次回また送られる
     }
+  }
+
+  if(failed.length===0){
+    pendingCount=0;
     syncStatus='ok';
     if(pushed>3) toast(`${pushed}頭を同期しました`);
-  } catch(e){
+  } else {
+    pendingCount=failed.length;
     syncStatus='error';
-    toast(`⚠️ サーバー保存失敗：${e.message}（ローカルには保存済み）`, 3500);
+    toast(`${pushed}頭同期・${failed.length}頭は後で自動再送信します`, 3500);
+    // 15秒後に自動リトライ
+    setTimeout(()=>{ syncInFlight=false; syncToServer(); }, 15000);
   }
+  syncInFlight=false;
   updateHeader();
 }
 
