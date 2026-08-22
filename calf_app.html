@@ -286,8 +286,9 @@ textarea{resize:vertical;min-height:60px;}
     <div class="card">
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">データは自動でサーバーに保存されます。手動で同期したい場合はこちら。</div>
       <button class="btn btn-o" onclick="syncFromServer().then(()=>renderList())">🔄 サーバーから最新データを取得</button>
-      <button class="btn btn-o mt8" onclick="syncToServer()">☁️ ローカルデータをサーバーに送る</button>
-      <div id="sync-status" style="font-size:12px;color:var(--text2);margin-top:8px;"></div>
+      <button class="btn btn-o mt8" onclick="forceSyncAll()">☁️ ローカルデータをサーバーに送る</button>
+      <button class="btn btn-o mt8" onclick="diagnoseSync()">🔍 同期状況を診断</button>
+      <div id="sync-status" style="font-size:12px;color:var(--text2);margin-top:8px;white-space:pre-wrap;"></div>
     </div>
   </div>
 
@@ -505,6 +506,45 @@ async function syncToServer(){
   }
   syncInFlight=false;
   updateHeader();
+}
+
+// 全頭を強制的に送り直す（ハッシュ無視）
+async function forceSyncAll(){
+  lastSyncedHash={};
+  await syncToServer();
+}
+
+// 同期診断：各個体を実際に送ってみて、失敗する個体とサイズを報告
+async function diagnoseSync(){
+  const el=document.getElementById('sync-status');
+  el.textContent='診断中...';
+  const results=[];
+  let okCount=0;
+  for(const a of animals){
+    const photos=extractPhotos(a);
+    const clean={...a};
+    clean.birthPhotos=undefined;
+    clean.evals=(a.evals||[]).map(ev=>({...ev, photos:undefined}));
+    clean._photos = Object.keys(photos).length>0 ? photos : null;
+    const body=JSON.stringify(clean);
+    const kb=Math.round(body.length/1024);
+    try{
+      const res=await fetch(API+'/animal',{method:'POST',headers:{'Content-Type':'application/json'},body});
+      if(res.ok){ okCount++; lastSyncedHash[a.key]=animalHash(a); }
+      else results.push(`❌ ${a.id5}: HTTP${res.status} (${kb}KB)`);
+    }catch(e){
+      results.push(`❌ ${a.id5}: ${e.message} (${kb}KB)`);
+    }
+  }
+  pendingCount=results.length;
+  syncStatus=results.length===0?'ok':'error';
+  updateHeader();
+  if(results.length===0){
+    el.textContent=`✅ 全${okCount}頭 正常に送信できました`;
+    toast('同期完了');
+  } else {
+    el.textContent=`成功${okCount}頭 / 失敗${results.length}頭:\n`+results.slice(0,20).join('\n');
+  }
 }
 
 async function syncFromServer(){
