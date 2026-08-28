@@ -531,7 +531,11 @@ async function diagnoseSync(){
     try{
       const res=await fetch(API+'/animal',{method:'POST',headers:{'Content-Type':'application/json'},body});
       if(res.ok){ okCount++; lastSyncedHash[a.key]=animalHash(a); }
-      else results.push(`❌ ${a.id5}: HTTP${res.status} (${kb}KB)`);
+      else{
+        let detail='';
+        try{ const txt=await res.text(); detail=txt.slice(0,150); }catch(_){}
+        results.push(`❌ ${a.id5}: HTTP${res.status} ${detail} (${kb}KB)`);
+      }
     }catch(e){
       results.push(`❌ ${a.id5}: ${e.message} (${kb}KB)`);
     }
