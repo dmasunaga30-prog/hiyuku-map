@@ -387,17 +387,51 @@ let syncStatus = 'idle'; // idle | syncing | ok | error
 const API = 'https://calf-api.d-masunaga30.workers.dev';
 
 // ══════ INIT ══════
-function init(){
-  // cv2からのデータ移行
-  const old = localStorage.getItem('cv2_animals');
-  const cur = localStorage.getItem('cv3_animals');
-  if(old && !cur){
-    localStorage.setItem('cv3_animals', old);
-    toast('前バージョンのデータを引き継ぎました', 3000);
-  }
+// ══════ IndexedDB保存（localStorageの容量上限[概ね5〜10MB]対策）══════
+const IDB_NAME='calfDB', IDB_STORE='kv';
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(IDB_NAME,1);
+    req.onupgradeneeded=()=>{ req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function idbGet(key){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const req=db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function idbSet(key,value){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(value,key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
 
-  const a = localStorage.getItem('cv3_animals');
-  if(a) animals = JSON.parse(a);
+async function init(){
+  // IndexedDBに既存データがあればそれを使う。無ければlocalStorage(cv3/cv2)から一度だけ移行
+  let data;
+  try{ data = await idbGet('cv3_animals'); }catch(_){ data=null; }
+  if(!data){
+    const old = localStorage.getItem('cv2_animals');
+    const cur = localStorage.getItem('cv3_animals');
+    const legacy = cur || old;
+    if(legacy){
+      try{
+        data = JSON.parse(legacy);
+        await idbSet('cv3_animals', data);
+        toast('データをIndexedDBに移行しました（容量上限対策）', 3000);
+      }catch(e){ toast('データ移行に失敗：'+e.message, 4000); }
+    }
+  }
+  if(data) animals = data;
   document.getElementById('hdrDate').textContent = new Date().toLocaleDateString('ja-JP');
   const today = new Date().toISOString().slice(0,10);
   ['b-dob','e-dob','t-dob'].forEach(id=>document.getElementById(id).value=today);
@@ -406,8 +440,12 @@ function init(){
   syncFromServer();
 }
 
-function saveLocal(){
-  localStorage.setItem('cv3_animals', JSON.stringify(animals));
+async function saveLocal(){
+  try{
+    await idbSet('cv3_animals', animals);
+  }catch(e){
+    toast('⚠️保存に失敗しました：'+e.message, 5000);
+  }
   updateHeader();
 }
 
@@ -428,7 +466,7 @@ function attachPhotos(a, photos){
 }
 
 async function save(){
-  saveLocal();
+  await saveLocal();
   await syncToServer();
 }
 
@@ -579,7 +617,7 @@ async function syncFromServer(){
         if(serverAnimals.length>0){
           const before=animals.length;
           mergeAnimals(serverAnimals);
-          saveLocal();
+          await saveLocal();
           const added=animals.length-before;
           if(added>0) toast(`サーバーから${added}頭を取得しました`);
         } else if(animals.length>0){
@@ -596,7 +634,7 @@ async function syncFromServer(){
       const res=await fetch(API+'/animals');
       if(res.ok){
         const srv=await res.json();
-        if(Array.isArray(srv)&&srv.length>0){ mergeAnimals(srv); saveLocal(); }
+        if(Array.isArray(srv)&&srv.length>0){ mergeAnimals(srv); await saveLocal(); }
       }
       syncStatus='ok';
     }catch(_){ syncStatus='error'; }
@@ -611,7 +649,7 @@ async function migrateFromLegacy(){
     if(!res.ok) return;
     const legacy=await res.json();
     if(Array.isArray(legacy)&&legacy.length>0){
-      mergeAnimals(legacy); saveLocal();
+      mergeAnimals(legacy); await saveLocal();
       toast(`旧データ${legacy.length}頭を新方式に移行中...`, 3000);
       // 移行後すぐアップロード（次のsyncToServerで全頭pushされる）
     }
@@ -722,7 +760,7 @@ async function compressAllPhotos(){
     }
   }
   let after=JSON.stringify(animals).length;
-  saveLocal();
+  await saveLocal();
   await syncToServer();
   st.innerHTML=`✓ ${count}枚を圧縮：${(before/1024/1024).toFixed(1)}MB → <b>${(after/1024/1024).toFixed(1)}MB</b>`;
   toast(`写真${count}枚を圧縮しました`);
@@ -1323,7 +1361,7 @@ async function deleteAnimal(key){
   if(!confirm('この個体の全データを削除しますか？')) return;
   animals=animals.filter(a=>a.key!==key);
   delete lastSyncedHash[key];
-  saveLocal();
+  await saveLocal();
   // サーバーからも削除
   try{ await fetch(API+'/animal?key='+encodeURIComponent(key),{method:'DELETE'}); }catch(_){}
   showPg('list'); renderList(); document.querySelectorAll('.nb')[1].classList.add('on');
@@ -1963,7 +2001,7 @@ function handleJsonImport(input){
         total.newAnimals+=s.newAnimals; total.mergedAnimals+=s.mergedAnimals;
         total.newEvals+=s.newEvals; total.newTreats+=s.newTreats;
       }catch(err){ total.errors.push(`${f.name}: ${err.message}`); }
-      done++; if(done===files.length){ save(); renderMergeResult(total); }
+      done++; if(done===files.length){ save().then(()=>renderMergeResult(total)); }
     };
     reader.readAsText(f);
   });
