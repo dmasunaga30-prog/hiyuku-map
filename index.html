@@ -81,6 +81,17 @@ tbody tr:last-child td{border-bottom:none}
 .mstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px}
 .msc{background:#fff;border:1px solid #e0dfd8;border-radius:8px;padding:10px 12px}
 .msc .ml{font-size:11px;color:#888;margin-bottom:2px}.msc .mv{font-size:22px;font-weight:600}
+.buc-card-wrap{margin-bottom:14px}
+.buc-sec{margin-bottom:10px}
+.buc-sec:last-child{margin-bottom:0}
+.buc-sec-lbl{font-size:10px;color:#999;margin-bottom:5px;font-weight:600}
+.buc-grid-inner{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px}
+.buc-item{background:#f8f7f2;border:1px solid #e8e7e0;border-radius:6px;padding:5px 7px}
+.buc-name{font-size:11px;font-weight:700;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.buc-nums{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;color:#888;margin-top:2px}
+.buc-pct{font-weight:700;font-size:11px}
+.buc-bar-bg{height:4px;background:#e8e7e0;border-radius:2px;margin-top:4px;overflow:hidden}
+.buc-bar-fill{height:100%;border-radius:2px}
 .legend{display:flex;gap:0;flex-wrap:wrap;margin-bottom:14px;background:#fff;border:1px solid #e0dfd8;border-radius:10px;overflow:hidden}
 .leg-sec{padding:10px 14px;border-right:1px solid #f0efe8;}
 .leg-sec:last-child{border-right:none}
@@ -462,6 +473,12 @@ tbody tr:last-child td{border-bottom:none}
 
   </div>
   <div id="ms-total-pct" style="text-align:right;font-size:12px;color:#888;margin:-4px 0 8px"></div>
+
+  <!-- 牛舎別収容率サマリー：一目でどの牛舎に何％いるかが分かる -->
+  <div class="card buc-card-wrap" style="padding:10px 12px 12px">
+    <div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">🏚 牛舎別収容率</div>
+    <div id="buc-grid"></div>
+  </div>
 
   <!-- 凡例 -->
   <div class="legend">
@@ -1652,6 +1669,36 @@ function renderMap(){
   }
   const secs=BARN_SECS.map(sec=>({label:sec.label,ids:[]}));
   BARNS.forEach(b=>{ secs[secIdxFor(b.id)].ids.push(b.id); });
+
+  // 牛舎別収容率サマリー（一目で全牛舎の在籍状況が分かるカード群）
+  const bucColor=pct=>{
+    if(pct===0) return '#bbb';
+    if(pct<80) return '#1D9E75';
+    if(pct<95) return '#EF9F27';
+    return '#E24B4A';
+  };
+  const bucHtml=secs.map(sec=>{
+    const visBarns=BARNS.filter(b=>sec.ids.includes(b.id));
+    if(!visBarns.length) return '';
+    const cards=visBarns.map(b=>{
+      const occ=Object.values(cattle).filter(c=>c&&c.barnId===b.id&&!c.shipped).length;
+      const cap=b.penCap||0;
+      const pct=cap?Math.round(occ/cap*1000)/10:0;
+      const color=bucColor(pct);
+      const barPct=Math.min(pct,100);
+      return `<div class="buc-item" title="${b.name}：${occ}/${cap}頭（${pct}%）">
+        <div class="buc-name">${b.name}</div>
+        <div class="buc-nums"><span>${occ}/${cap}</span><span class="buc-pct" style="color:${color}">${pct}%</span></div>
+        <div class="buc-bar-bg"><div class="buc-bar-fill" style="width:${barPct}%;background:${color}"></div></div>
+      </div>`;
+    }).join('');
+    return `<div class="buc-sec">
+      <div class="buc-sec-lbl">${sec.label}</div>
+      <div class="buc-grid-inner">${cards}</div>
+    </div>`;
+  }).join('');
+  const bucGridEl=document.getElementById('buc-grid');
+  if(bucGridEl) bucGridEl.innerHTML=bucHtml;
 
   document.getElementById('msecs').innerHTML=secs.map(sec=>{
     const visBarns=BARNS.filter(b=>sec.ids.includes(b.id));
