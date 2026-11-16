@@ -579,12 +579,11 @@ tbody tr:last-child td{border-bottom:none}
       <button class="btn btn-sm" onclick="applyMultiRank()" style="background:#EF9F27;color:#fff;border-color:#d4820a">一括変更</button>
       <button class="btn btn-sm" onclick="clearMultiSelect()">選択解除</button>
       <span style="border-left:1px solid #e0dfd8;height:20px;margin:0 4px"></span>
-      <span style="font-size:12px;color:#7a5c00;font-weight:500">月齢で選択</span>
-      <input type="number" id="multi-age-from" min="0" max="99" placeholder="から" style="width:62px;font-size:12px;padding:4px 6px;border:1px solid #e0dfd8;border-radius:6px">
+      <span style="font-size:12px;color:#7a5c00;font-weight:500">生年月日で検索</span>
+      <input type="date" id="multi-dob-from" style="font-size:12px;padding:3px 6px;border:1px solid #e0dfd8;border-radius:6px">
       <span style="font-size:12px;color:#7a5c00">〜</span>
-      <input type="number" id="multi-age-to" min="0" max="99" placeholder="まで" style="width:62px;font-size:12px;padding:4px 6px;border:1px solid #e0dfd8;border-radius:6px">
-      <span style="font-size:12px;color:#7a5c00">ヶ月</span>
-      <button class="btn btn-sm" onclick="pickByAge()" style="background:#fff8e6;border-color:#EF9F27;color:#7a5c00">月齢で抽出</button>
+      <input type="date" id="multi-dob-to" style="font-size:12px;padding:3px 6px;border:1px solid #e0dfd8;border-radius:6px">
+      <button class="btn btn-sm" onclick="pickByDob()" style="background:#fff8e6;border-color:#EF9F27;color:#7a5c00">検索</button>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
@@ -603,7 +602,7 @@ tbody tr:last-child td{border-bottom:none}
       <button class="btn btn-sm" onclick="closePickList()">一覧を閉じる</button>
     </div>
     <div class="tw" style="max-height:380px;overflow:auto;margin-bottom:0">
-      <table style="min-width:760px">
+      <table style="min-width:840px">
         <thead><tr id="pick-thead"></tr></thead>
         <tbody id="pick-tbody"></tbody>
       </table>
@@ -3285,7 +3284,7 @@ function clearOps() {
 // 下5桁検索／月齢抽出の結果は、マップへ飛ばさずに「一覧」で表示する。
 let _pickKeys = [];      // 一覧に出している個体のキー
 let _pickTitle = '';
-let _pickSource = '';    // 'tag' | 'age'
+let _pickSource = '';    // 'tag' | 'dob'
 
 function _pickEsc(v){
   return String(v==null?'':v).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -3316,32 +3315,40 @@ function searchMap(val){
   showPickList(found, `🔍 下5桁「${tag}」の検索結果：${found.length}頭`, 'tag');
 }
 
-function pickByAge(){
-  const fromV = document.getElementById('multi-age-from').value;
-  const toV   = document.getElementById('multi-age-to').value;
-  if(fromV==='' && toV===''){ alert('月齢の範囲を入力してください（例: 13 〜 22）'); return; }
-  const from = fromV===''?-Infinity:parseInt(fromV);
-  const to   = toV===''?Infinity:parseInt(toV);
-  if(from>to){ alert('「から」は「まで」以下の月齢にしてください'); return; }
+// 生年月日 → 'YYYY-MM-DD'（不明なら ''）
+function _dobKey(dob){
+  if(!dob) return '';
+  const m=String(dob).match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(m) return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  const d=new Date(dob);
+  return isNaN(d)?'':d.toISOString().slice(0,10);
+}
+
+function pickByDob(){
+  const from = document.getElementById('multi-dob-from').value; // 'YYYY-MM-DD' or ''
+  const to   = document.getElementById('multi-dob-to').value;
+  if(!from && !to){ alert('生年月日の範囲を指定してください（片方だけでも検索できます）'); return; }
+  if(from && to && from>to){ alert('「から」は「まで」より前の日付にしてください'); return; }
   const found = [];
   Object.entries(cattle).forEach(([k,c])=>{
     if(!c || c.shipped) return;
-    const age = c.age||0;
-    if(age>=from && age<=to) found.push(k);
+    const d=_dobKey(c.dob);
+    if(!d) return;
+    if((!from || d>=from) && (!to || d<=to)) found.push(k);
   });
-  const label = (fromV===''?'':fromV)+'〜'+(toV===''?'':toV)+'ヶ月';
+  const label = (from||'')+' 〜 '+(to||'');
   if(!found.length){
-    alert('月齢 '+label+' の個体は見つかりませんでした');
+    alert('生年月日 '+label+' の個体は見つかりませんでした');
     return;
   }
-  // 抽出した個体を選択状態にする（ランク一括変更にそのまま使える）
+  // 見つかった個体を選択状態にする（ランク一括変更にそのまま使える）
   found.forEach(k=>{
     selectedCells.add(k);
     const el=document.getElementById('cell-'+k.replace(/:/g,'-'));
     if(el) el.style.outline='3px solid #EF9F27';
   });
   updateMultiSelectCount();
-  showPickList(found, `📅 月齢 ${label} の抽出結果：${found.length}頭`, 'age');
+  showPickList(found, `🎂 生年月日 ${label} の検索結果：${found.length}頭`, 'dob');
 }
 
 function showPickList(keys, title, source){
@@ -3377,7 +3384,7 @@ function renderPickList(){
   document.getElementById('pick-list-title').textContent = _pickTitle.replace(/：\d+頭$/, '：'+_pickKeys.length+'頭');
   document.getElementById('pick-thead').innerHTML =
     (multi?`<th style="width:34px"><input type="checkbox" ${allSel?'checked':''} onchange="pickToggleAll(this.checked)" title="全選択／全解除"></th>`:'')+
-    ['場所（牛舎）','下5桁','個体識別番号','名号','性別','月齢','品種','ランク','治療回数','導入日','導入後','']
+    ['場所（牛舎）','下5桁','個体識別番号','名号','性別','生年月日','月齢','品種','ランク','治療回数','導入日','導入後','']
       .map(h=>`<th>${h}</th>`).join('');
   document.getElementById('pick-tbody').innerHTML = _pickKeys.map(k=>{
     const c=cattle[k];
@@ -3394,6 +3401,7 @@ function renderPickList(){
       `<td style="padding:5px 8px;color:#666;white-space:nowrap">${_pickEsc(c.fullId)}</td>`+
       `<td style="padding:5px 8px;white-space:nowrap">${_pickEsc(c.name||'')}</td>`+
       `<td style="padding:5px 8px">${_pickEsc(c.sex||'')}</td>`+
+      `<td style="padding:5px 8px;white-space:nowrap">${_pickEsc(_dobKey(c.dob)||'—')}</td>`+
       `<td style="padding:5px 8px;white-space:nowrap">${_pickEsc(c.age||0)}ヶ月</td>`+
       `<td style="padding:5px 8px">${_pickEsc(c.breed||'K')}</td>`+
       `<td style="padding:5px 8px;font-weight:600;color:${rankColor[rk]};white-space:nowrap">${rk}-${rankLabel[rk]}</td>`+
