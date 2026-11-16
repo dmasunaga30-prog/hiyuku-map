@@ -409,6 +409,13 @@ tbody tr:last-child td{border-bottom:none}
       一括導入入力　<span id="rcnt" style="font-weight:400;color:#888">0頭入力中</span>
       <span id="sbar" style="display:flex;gap:6px"></span>
     </div>
+    <div style="margin-bottom:10px">
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#EAF3FC;border:1.5px solid #378ADD;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;color:#1a6fc4">
+        📊 耳標Excelから一括登録
+        <input type="file" id="eartag-excel-input" accept=".xlsx" style="display:none" onchange="importEartagExcel(this)">
+      </label>
+      <span style="font-size:11px;color:#888;margin-left:8px">シート名「本体X」→「X号舎」、「M-X」→「M-X」として自動照合して下に追加します</span>
+    </div>
     <div class="notice">個体識別番号の<strong>下5桁</strong>を入力すると自動照合。候補が複数ある場合はダイアログが開きます。Enter/Tabで次行へ移動。</div>
     <div class="tw" style="max-height:460px;overflow-y:auto">
       <table style="min-width:880px">
@@ -1439,7 +1446,7 @@ function buildRow(i){
   const ok=lu?'ok':'',er=r.status==='notfound'?'er':'';
   return `<tr id="row-${i}">
     <td class="rn">${i+1}</td>
-    <td style="text-align:center;padding:0 3px"><span class="sdot" id="dot-${i}" style="background:${sc}"></span></td>
+    <td style="text-align:center;padding:0 3px"><span class="sdot" id="dot-${i}" style="background:${sc};cursor:pointer" title="クリックで再照合" onclick="if(rows[${i}].tag5.length===5)doLookup(${i},rows[${i}].tag5)"></span></td>
     <td><input class="ci ${ic}" id="tag-${i}" type="text" inputmode="numeric" maxlength="5" placeholder="12345"
       value="${r.tag5}" oninput="onTag(${i},this.value)" onkeydown="hkey(event,${i})"></td>
     <td><select class="cs bsel" id="barn-${i}" onchange="rows[${i}].barnId=this.value">${barnOpts(r.barnId)}</select></td>
@@ -1596,6 +1603,83 @@ function nextInput(){
   document.getElementById('done-area').style.display='none';
   rows=[];document.getElementById('ebody').innerHTML='';addRows(10);
   window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── 耳標Excelから一括登録（本体X号舎・M-X対応）──
+function _eartagBarnFor(sheetName){
+  let m;
+  if((m = sheetName.match(/^本体\s*([0-9]+)$/))){
+    const target = m[1] + '号舎';
+    return BARNS.find(x=>x.name===target) || null;
+  }
+  if((m = sheetName.match(/^M-?\s*([0-9]+)$/i))){
+    const target = 'M-' + m[1];
+    return BARNS.find(x=>x.name===target || x.id==='M'+m[1]) || null;
+  }
+  // それ以外はシート名そのものを牛舎名として試す
+  return BARNS.find(x=>x.name===sheetName || x.id===sheetName) || null;
+}
+async function importEartagExcel(input){
+  const file = input.files[0];
+  if(!file) return;
+  if(!DB){
+    alert('先に肥育台帳（.xlsx/.xlsm）を読み込んでください。台帳データがないと個体識別番号の照合ができません。');
+    input.value='';
+    return;
+  }
+  try{
+    const buf = await file.arrayBuffer();
+    const wb2 = XLSX.read(buf, {type:'array'});
+    const added = [];
+    const unmatched = [];
+    wb2.SheetNames.forEach(sn=>{
+      if(sn==='集計') return;
+      const b = _eartagBarnFor(sn);
+      if(!b){ unmatched.push(sn); return; }
+      const ws2 = wb2.Sheets[sn];
+      const data = XLSX.utils.sheet_to_json(ws2, {header:1, defval:null});
+      data.forEach(row=>{
+        if(!row) return;
+        for(let c=1;c<=6;c++){
+          const v = row[c];
+          if(v===null||v===undefined||v==='') continue;
+          const s = String(v).trim();
+          if(/^\d{5}$/.test(s)) added.push({tag5:s, barnId:b.id});
+        }
+      });
+    });
+    if(!added.length){
+      alert('読み込める耳標番号（5桁）が見つかりませんでした。'+(unmatched.length?'\n未対応のシート: '+unmatched.join('、'):''));
+      input.value='';
+      return;
+    }
+    const tb = document.getElementById('ebody');
+    const startIdx = rows.length;
+    added.forEach(a=>{
+      rows.push({tag5:a.tag5, barnId:a.barnId, pen:'', lookup:null, status:'searching', rank:0});
+    });
+    for(let i=startIdx;i<rows.length;i++){
+      const res = DB[rows[i].tag5];
+      if(!res){ rows[i].status='notfound'; rows[i].lookup=null; }
+      else if(res.length===1){ rows[i].status='found'; rows[i].lookup=res[0]; }
+      else { rows[i].status='multi'; rows[i].lookup=null; }
+    }
+    let html='';
+    for(let i=startIdx;i<rows.length;i++) html+=buildRow(i);
+    tb.insertAdjacentHTML('beforeend', html);
+    updateStats();
+    const added_ = rows.slice(startIdx);
+    const nFound = added_.filter(r=>r.status==='found').length;
+    const nMulti = added_.filter(r=>r.status==='multi').length;
+    const nNf = added_.filter(r=>r.status==='notfound').length;
+    let msg = `Excelから${added.length}頭ぶんを読み込みました（照合済 ${nFound} / 候補複数 ${nMulti}・各行の●をクリックで選択 / 台帳未登録 ${nNf}）。`;
+    if(unmatched.length) msg += '\n\n未対応のシート（スキップしました）: '+unmatched.join('、');
+    alert(msg);
+    document.getElementById('ebody').parentElement.scrollIntoView({behavior:'smooth'});
+  }catch(e){
+    alert('読み込みに失敗しました: '+e.message);
+  }
+  input.value='';
 }
 
 // ── カラー判定 ──
