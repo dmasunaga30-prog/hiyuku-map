@@ -346,6 +346,12 @@ tbody tr:last-child td{border-bottom:none}
       <input type="file" id="map-excel-input" accept=".xlsx" style="display:none" onchange="loadMapExcel(this)">
     </label>
     <div style="font-size:11px;color:#888;margin-top:-6px">📱 スマホで確認するときはこちら</div>
+    <!-- クラウドから読み込んで起動（他デバイスで保存したデータを開く） -->
+    <button onclick="cloudStart()" style="padding:12px 24px;background:#fff;border:1.5px solid #E8820C;border-radius:8px;font-size:14px;font-weight:600;color:#E8820C;cursor:pointer;margin-top:4px">
+      ☁ クラウドから読み込んで起動
+    </button>
+    <div style="font-size:11px;color:#888;margin-top:-6px">PCで「↑ 上書き保存」したデータをこの端末で開きます</div>
+    <div id="cloud-start-msg" style="font-size:12px;color:#c00;display:none"></div>
     <!-- 前回データ復元ボタン -->
     <div id="restore-btn-wrap" style="display:none;flex-direction:column;align-items:center;gap:4px">
       <button onclick="restoreAndStart()" style="padding:10px 20px;background:#fff;border:1.5px solid #1D9E75;border-radius:8px;font-size:13px;font-weight:600;color:#1D9E75;cursor:pointer">
@@ -572,6 +578,13 @@ tbody tr:last-child td{border-bottom:none}
       </select>
       <button class="btn btn-sm" onclick="applyMultiRank()" style="background:#EF9F27;color:#fff;border-color:#d4820a">一括変更</button>
       <button class="btn btn-sm" onclick="clearMultiSelect()">選択解除</button>
+      <span style="border-left:1px solid #e0dfd8;height:20px;margin:0 4px"></span>
+      <span style="font-size:12px;color:#7a5c00;font-weight:500">月齢で選択</span>
+      <input type="number" id="multi-age-from" min="0" max="99" placeholder="から" style="width:62px;font-size:12px;padding:4px 6px;border:1px solid #e0dfd8;border-radius:6px">
+      <span style="font-size:12px;color:#7a5c00">〜</span>
+      <input type="number" id="multi-age-to" min="0" max="99" placeholder="まで" style="width:62px;font-size:12px;padding:4px 6px;border:1px solid #e0dfd8;border-radius:6px">
+      <span style="font-size:12px;color:#7a5c00">ヶ月</span>
+      <button class="btn btn-sm" onclick="pickByAge()" style="background:#fff8e6;border-color:#EF9F27;color:#7a5c00">月齢で抽出</button>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
@@ -582,6 +595,19 @@ tbody tr:last-child td{border-bottom:none}
       onkeydown="if(event.key==='Escape'){this.value='';searchMap('');}">
     <span id="map-search-result" style="font-size:13px;color:#888"></span>
     <button class="btn btn-sm" onclick="document.getElementById('map-search-input').value='';searchMap('')">クリア</button>
+  </div>
+  <!-- ピックアップ一覧（下5桁検索・月齢抽出の結果） -->
+  <div id="pick-list-card" class="card" style="display:none;padding:10px 12px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <span id="pick-list-title" style="font-size:13px;font-weight:600;color:#555"></span>
+      <button class="btn btn-sm" onclick="closePickList()">一覧を閉じる</button>
+    </div>
+    <div class="tw" style="max-height:380px;overflow:auto;margin-bottom:0">
+      <table style="min-width:760px">
+        <thead><tr id="pick-thead"></tr></thead>
+        <tbody id="pick-tbody"></tbody>
+      </table>
+    </div>
   </div>
   <div id="msecs"></div>
 
@@ -1347,6 +1373,49 @@ function restoreAndStart() {
   }
 }
 
+// ── クラウドから読み込んで起動（起動画面から）──
+async function cloudStart() {
+  const msg = document.getElementById('cloud-start-msg');
+  const show = (t, ok) => { if (msg) { msg.style.display = 'block'; msg.style.color = ok ? '#666' : '#c00'; msg.textContent = t; } };
+  if (!SYNC_WORKER_URL) { show('SYNC_WORKER_URL が設定されていません', false); return; }
+  show('クラウドから取得中...', true);
+  try {
+    const results = {};
+    for (const base of ['cattle', 'barns', 'feed', 'loss', 'uwait', 'occsnap']) {
+      const res = await fetch(`${SYNC_WORKER_URL}/sync/${_fkey(base)}`, { headers: _syncHeaders() });
+      if (!res.ok) throw new Error(`${_fkey(base)}: HTTP ${res.status}`);
+      const body = await res.json();
+      results[base] = body.value;
+    }
+    if (results.cattle === null || results.cattle === undefined) {
+      show('クラウドにデータがありません。PCで先に「↑ 上書き保存」してください。', false);
+      return;
+    }
+    cattle = results.cattle || {};
+    if (results.barns)   BARNS = results.barns;
+    if (results.feed)    feedData = results.feed;
+    if (results.loss)    lossData = results.loss;
+    if (results.uwait)   { urgentWaitList = results.uwait; localStorage.setItem(UW_KEY, JSON.stringify(urgentWaitList)); }
+    if (results.occsnap) occSnapshots = results.occsnap;
+    migrateToFlatBarns();
+    saveToStorage();
+    saveOccSnapshots();
+    document.getElementById('lov').style.display = 'none';
+    renderBmgr();
+    addRows(10);
+    renderMap();
+    renderUrgentWaitList();
+    const cnt = Object.values(cattle).filter(c => c && !c.shipped).length;
+    ['ledger-status', 'ledger-status-inp'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = 'クラウドから読み込み（在舎' + cnt + '頭）　※台帳は別途読み込んでください';
+    });
+  } catch (e) {
+    console.error('cloudStart error:', e);
+    show('取得に失敗しました: ' + e.message, false);
+  }
+}
+
 // ── ページ切替 ──
 let _currentPage='inp';
 function goPage(p){
@@ -2007,6 +2076,7 @@ function clickCell(barnId,pen,idx){
       if(el) el.style.outline='3px solid #EF9F27';
     }
     updateMultiSelectCount();
+    renderPickList();
     return;
   }
   // フローティングパネルで表示
@@ -3211,55 +3281,169 @@ function clearOps() {
 }
 
 
-// ━━━ マップ検索 ━━━
+// ━━━ マップ検索・ピックアップ一覧 ━━━
+// 下5桁検索／月齢抽出の結果は、マップへ飛ばさずに「一覧」で表示する。
+let _pickKeys = [];      // 一覧に出している個体のキー
+let _pickTitle = '';
+let _pickSource = '';    // 'tag' | 'age'
+
+function _pickEsc(v){
+  return String(v==null?'':v).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
 function searchMap(val){
   const tag = val.trim();
-  // 全セルのハイライトをリセット
-  document.querySelectorAll('.cc.search-hit').forEach(el=>{
-    el.classList.remove('search-hit');
-    el.style.outline='';
-    el.style.zIndex='';
-  });
+  const resEl = document.getElementById('map-search-result');
   if(!tag || tag.length < 2){
-    document.getElementById('map-search-result').textContent='';
+    resEl.textContent='';
+    if(_pickSource==='tag') closePickList();
     return;
   }
-  // マップ上で該当個体を探す
-  let found = [];
+  const found = [];
   Object.entries(cattle).forEach(([k,c])=>{
-    if(!c) return;
+    if(!c || c.shipped) return;
     const id5 = String(c.fullId).slice(-5);
-    if(id5.includes(tag) || id5 === tag.padStart(5,'0')){
-      found.push({key:k, c});
-    }
+    if(id5.includes(tag) || id5 === tag.padStart(5,'0')) found.push(k);
   });
-  const resEl = document.getElementById('map-search-result');
   if(!found.length){
     resEl.textContent = '見つかりません';
     resEl.style.color = '#c00';
+    if(_pickSource==='tag') closePickList();
     return;
   }
   resEl.style.color = '#1a6b40';
   resEl.textContent = found.length + '頭見つかりました';
-  // 該当セルをハイライト
-  found.forEach(({key, c})=>{
-    const cellId = 'cell-' + key.replace(/:/g,'-');
-    const el = document.getElementById(cellId);
-    if(el){
-      el.classList.add('search-hit');
-      el.style.outline = '3px solid #FFD700';
-      el.style.zIndex = '10';
-      // 最初の1頭はスクロール
-      if(found.indexOf(found.find(f=>f.key===key))===0){
-        el.scrollIntoView({behavior:'smooth', block:'center'});
-      }
-    }
+  showPickList(found, `🔍 下5桁「${tag}」の検索結果：${found.length}頭`, 'tag');
+}
+
+function pickByAge(){
+  const fromV = document.getElementById('multi-age-from').value;
+  const toV   = document.getElementById('multi-age-to').value;
+  if(fromV==='' && toV===''){ alert('月齢の範囲を入力してください（例: 13 〜 22）'); return; }
+  const from = fromV===''?-Infinity:parseInt(fromV);
+  const to   = toV===''?Infinity:parseInt(toV);
+  if(from>to){ alert('「から」は「まで」以下の月齢にしてください'); return; }
+  const found = [];
+  Object.entries(cattle).forEach(([k,c])=>{
+    if(!c || c.shipped) return;
+    const age = c.age||0;
+    if(age>=from && age<=to) found.push(k);
   });
-  // 1頭だけなら詳細パネルを開く
-  if(found.length === 1){
-    const [barnId, pen, idx] = found[0].key.split(':');
-    clickCell(barnId, parseInt(pen), parseInt(idx));
+  const label = (fromV===''?'':fromV)+'〜'+(toV===''?'':toV)+'ヶ月';
+  if(!found.length){
+    alert('月齢 '+label+' の個体は見つかりませんでした');
+    return;
   }
+  // 抽出した個体を選択状態にする（ランク一括変更にそのまま使える）
+  found.forEach(k=>{
+    selectedCells.add(k);
+    const el=document.getElementById('cell-'+k.replace(/:/g,'-'));
+    if(el) el.style.outline='3px solid #EF9F27';
+  });
+  updateMultiSelectCount();
+  showPickList(found, `📅 月齢 ${label} の抽出結果：${found.length}頭`, 'age');
+}
+
+function showPickList(keys, title, source){
+  // 牛舎の並び順 → 枠番号の順に整列
+  const barnOrder = {};
+  BARNS.forEach((b,i)=>{ barnOrder[b.id]=i; });
+  _pickKeys = keys.slice().sort((x,y)=>{
+    const [bx,,ix]=x.split(':'), [by,,iy]=y.split(':');
+    return ((barnOrder[bx]??999)-(barnOrder[by]??999)) || (parseInt(ix)-parseInt(iy));
+  });
+  _pickTitle = title;
+  _pickSource = source;
+  renderPickList();
+}
+
+function closePickList(){
+  _pickKeys = []; _pickTitle=''; _pickSource='';
+  const card=document.getElementById('pick-list-card');
+  if(card) card.style.display='none';
+}
+
+function renderPickList(){
+  const card=document.getElementById('pick-list-card');
+  if(!card) return;
+  // 出荷などで消えた個体は一覧から外す
+  _pickKeys = _pickKeys.filter(k=>cattle[k] && !cattle[k].shipped);
+  if(!_pickKeys.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  const rankLabel=['健康','要観察','病畜','重篤'];
+  const rankColor=['#1D9E75','#B87A00','#D85A30','#E24B4A'];
+  const multi = (typeof multiSelectMode!=='undefined') && multiSelectMode;
+  const allSel = multi && _pickKeys.every(k=>selectedCells.has(k));
+  document.getElementById('pick-list-title').textContent = _pickTitle.replace(/：\d+頭$/, '：'+_pickKeys.length+'頭');
+  document.getElementById('pick-thead').innerHTML =
+    (multi?`<th style="width:34px"><input type="checkbox" ${allSel?'checked':''} onchange="pickToggleAll(this.checked)" title="全選択／全解除"></th>`:'')+
+    ['場所（牛舎）','下5桁','個体識別番号','名号','性別','月齢','品種','ランク','治療回数','導入日','導入後','']
+      .map(h=>`<th>${h}</th>`).join('');
+  document.getElementById('pick-tbody').innerHTML = _pickKeys.map(k=>{
+    const c=cattle[k];
+    const barnId=k.split(':')[0];
+    const b=BARNS.find(x=>x.id===barnId)||{name:barnId};
+    const rk=c.sickRank||0;
+    const im=introMonths(c);
+    const sel=selectedCells.has(k);
+    const kk=_pickEsc(k);
+    return `<tr style="${sel?'background:#fff8e6':''}">`+
+      (multi?`<td style="text-align:center"><input type="checkbox" ${sel?'checked':''} onchange="pickToggle('${kk}',this.checked)"></td>`:'')+
+      `<td style="padding:5px 8px;font-weight:600;white-space:nowrap">${_pickEsc(b.name)}</td>`+
+      `<td style="padding:5px 8px;font-weight:700;font-size:14px">${_pickEsc(String(c.fullId).slice(-5))}</td>`+
+      `<td style="padding:5px 8px;color:#666;white-space:nowrap">${_pickEsc(c.fullId)}</td>`+
+      `<td style="padding:5px 8px;white-space:nowrap">${_pickEsc(c.name||'')}</td>`+
+      `<td style="padding:5px 8px">${_pickEsc(c.sex||'')}</td>`+
+      `<td style="padding:5px 8px;white-space:nowrap">${_pickEsc(c.age||0)}ヶ月</td>`+
+      `<td style="padding:5px 8px">${_pickEsc(c.breed||'K')}</td>`+
+      `<td style="padding:5px 8px;font-weight:600;color:${rankColor[rk]};white-space:nowrap">${rk}-${rankLabel[rk]}</td>`+
+      `<td style="padding:5px 8px;text-align:center">${_pickEsc(c.treatCount||0)}</td>`+
+      `<td style="padding:5px 8px;white-space:nowrap">${_pickEsc(c.introDate||'—')}</td>`+
+      `<td style="padding:5px 8px;white-space:nowrap">${c.introDate?im+'ヶ月':'—'}</td>`+
+      `<td style="padding:5px 8px;white-space:nowrap">`+
+        `<button class="btn btn-sm" onclick="pickOpenDetail('${kk}')">詳細</button> `+
+        `<button class="btn btn-sm" onclick="pickShowOnMap('${kk}')">📍マップ</button>`+
+      `</td></tr>`;
+  }).join('');
+}
+
+function pickToggle(k, on){
+  const el=document.getElementById('cell-'+k.replace(/:/g,'-'));
+  if(on){ selectedCells.add(k); if(el) el.style.outline='3px solid #EF9F27'; }
+  else  { selectedCells.delete(k); if(el) el.style.outline=''; }
+  updateMultiSelectCount();
+  renderPickList();
+}
+function pickToggleAll(on){
+  _pickKeys.forEach(k=>{
+    const el=document.getElementById('cell-'+k.replace(/:/g,'-'));
+    if(on){ selectedCells.add(k); if(el) el.style.outline='3px solid #EF9F27'; }
+    else  { selectedCells.delete(k); if(el) el.style.outline=''; }
+  });
+  updateMultiSelectCount();
+  renderPickList();
+}
+
+// 一覧の「詳細」: 個体の詳細パネルを開く（複数選択モード中でも選択を変えずに開く）
+function pickOpenDetail(k){
+  const c=cattle[k];
+  if(!c) return;
+  const [barnId,pen,idx]=k.split(':');
+  selKey=k;
+  _fpBarnId=barnId; _fpPen=pen; _fpIdx=parseInt(idx);
+  _buildFloatPanel(barnId,pen,parseInt(idx),c);
+  _highlightCell(barnId,pen,parseInt(idx));
+  document.getElementById('float-panel').style.display='block';
+}
+
+// 一覧の「📍マップ」: 押したときだけマップ上の位置へ移動して一時的に強調
+function pickShowOnMap(k){
+  const el=document.getElementById('cell-'+k.replace(/:/g,'-'));
+  if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  const prev=el.style.outline;
+  el.style.outline='4px solid #FFD700';
+  setTimeout(()=>{ el.style.outline = selectedCells.has(k)?'3px solid #EF9F27':prev; }, 2500);
 }
 
 
@@ -4753,6 +4937,7 @@ function toggleMultiSelect(){
     bar.style.display='none';
     clearMultiSelect();
   }
+  renderPickList();
 }
 
 function clearMultiSelect(){
@@ -4762,6 +4947,7 @@ function clearMultiSelect(){
   });
   selectedCells.clear();
   updateMultiSelectCount();
+  renderPickList();
 }
 
 function updateMultiSelectCount(){
@@ -4780,6 +4966,7 @@ function applyMultiRank(){
   saveToStorage();
   clearMultiSelect();
   renderMap();
+  renderPickList();
 }
 
 
