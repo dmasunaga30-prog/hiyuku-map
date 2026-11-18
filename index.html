@@ -1630,9 +1630,34 @@ function goConfirm(){
   document.getElementById('confirm-area').scrollIntoView({behavior:'smooth'});
 }
 function doRegister(){
-  let ok=0;
-  rows.filter(r=>r.status==='found'&&r.barnId&&r.lookup).forEach(r=>{
+  let ok=0, nSame=0, nMove=0, nBatchDup=0, nNoSlot=0;
+  const targets=rows.filter(r=>r.status==='found'&&r.barnId&&r.lookup&&!r.lookup[8]);
+  // 既存の牛（出荷済み以外）を個体識別番号で引けるようにする
+  const _existing={};
+  Object.keys(cattle).forEach(k=>{const c=cattle[k];if(c&&c.fullId&&!c.shipped)_existing[c.fullId]=k;});
+  // 事前チェック：重複の件数を集計して確認
+  {
+    const seen={};let pNew=0,pSame=0,pMove=0,pDup=0;
+    targets.forEach(r=>{
+      const id=r.lookup[0];
+      if(seen[id]){pDup++;return;}seen[id]=1;
+      const ek=_existing[id];
+      if(!ek)pNew++;
+      else if(cattle[ek].barnId===r.barnId)pSame++;
+      else pMove++;
+    });
+    if(pSame||pMove||pDup){
+      const msg=`登録内容の確認\n\n新規登録：${pNew}頭\n既に同じ牛舎にいる（スキップ）：${pSame}頭\n別の牛舎から移動（ランク・治療回数は引き継ぎ）：${pMove}頭\n選択の重複（同じ牛を2回選択・スキップ）：${pDup}頭\n\nこの内容で登録しますか？`;
+      if(!confirm(msg))return;
+    }
+  }
+  const _placed={};
+  targets.forEach(r=>{
     const b=BARNS.find(x=>x.id===r.barnId);if(!b)return;
+    const _id=r.lookup[0];
+    if(_placed[_id]){nBatchDup++;return;}
+    const _ek=_existing[_id];
+    if(_ek&&cattle[_ek]&&cattle[_ek].barnId===r.barnId){nSame++;_placed[_id]=1;return;}
     // 部屋番号指定 or 自動（空き部屋の空きスロット）
     let targetPen=r.pen?parseInt(r.pen):null;
     let targetIdx=null;
@@ -1651,21 +1676,81 @@ function doRegister(){
         }
       }
     }
-    if(targetPen===null||targetIdx===null)return;
+    if(targetPen===null||targetIdx===null){nNoSlot++;return;}
     const k=penKey(r.barnId,targetPen,targetIdx);
-    // 出荷済み・死亡・緊急は登録しない
-    if(r.lookup[8]) return;
+    // 別の牛舎に登録済みなら移動（旧スロットを空け、ランク・治療回数を引き継ぐ）
+    let keepRank=r.rank||0, keepTreat=0;
+    if(_ek&&cattle[_ek]){
+      keepRank=r.rank||cattle[_ek].sickRank||0;
+      keepTreat=cattle[_ek].treatCount||0;
+      delete cattle[_ek];
+      nMove++;
+    }
     cattle[k]={fullId:r.lookup[0],name:r.lookup[1]||'',sex:SEX_MAP[r.lookup[2]]||r.lookup[2],
       dob:r.lookup[3],age:r.lookup[4],breed:r.lookup[5]||'K',introDate:r.lookup[6]||'',origin:r.lookup[7]||'導入',
-      sickRank:r.rank||0,treatCount:0,
+      sickRank:keepRank,treatCount:keepTreat,
       barnId:r.barnId,pen:targetPen,idx:targetIdx,shipped:false};
+    _placed[_id]=1;
     ok++;
   });
   saveToStorage();
   document.getElementById('confirm-area').style.display='none';
   document.getElementById('done-area').style.display='block';
-  document.getElementById('done-msg').textContent=`${ok}頭をマップに登録しました`;
+  document.getElementById('done-msg').textContent=`${ok}頭をマップに登録しました`
+    +(nMove?`（うち${nMove}頭は別牛舎から移動）`:'')
+    +(nSame?`／既に同じ牛舎にいたためスキップ ${nSame}頭`:'')
+    +(nBatchDup?`／選択の重複でスキップ ${nBatchDup}頭`:'')
+    +(nNoSlot?`／牛舎に空きがなく未登録 ${nNoSlot}頭`:'');
+  // ── Excelにいない牛（＝もう牛舎にいない牛）の整理 ──
+  // 対象は「今回のExcelに載っている牛舎」だけ。F1（交雑）は台帳外なので対象外。
+  const _keep={};targets.forEach(r=>{_keep[r.lookup[0]]=1;});
+  const _covered={};rows.forEach(r=>{if(r.barnId&&r.tag5)_covered[r.barnId]=1;});
+  const _unresolved=rows.filter(r=>r.barnId&&r.tag5&&r.status!=='found').length;
+  const _stale=[];let _f1kept=0;
+  Object.keys(cattle).forEach(k=>{
+    const c=cattle[k];
+    if(!c||c.shipped||!c.fullId||!_covered[c.barnId]||_keep[c.fullId])return;
+    if(/交雑|F-?1/i.test((c.breed||'')+(c.sex||'')+(c.name||''))){_f1kept++;return;}
+    _stale.push(k);
+  });
+  if(_stale.length)showStaleDialog(_stale,_f1kept,_unresolved);
   document.getElementById('done-area').scrollIntoView({behavior:'smooth'});
+}
+// Excelに載っていない牛の一覧確認ダイアログ（「出荷済みにする」／何もしない）
+function showStaleDialog(keys,f1kept,unresolved){
+  const old=document.getElementById('stale-dlg');if(old)old.remove();
+  const bn=id=>(BARNS.find(x=>x.id===id)||{name:id}).name;
+  const per={};keys.forEach(k=>{const n=bn(cattle[k].barnId);per[n]=(per[n]||0)+1;});
+  const sorted=keys.slice().sort((a,b)=>{
+    const ia=BARNS.findIndex(x=>x.id===cattle[a].barnId),ib=BARNS.findIndex(x=>x.id===cattle[b].barnId);
+    return ia-ib||(cattle[a].idx||0)-(cattle[b].idx||0);});
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const d=document.createElement('div');d.id='stale-dlg';
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px';
+  d.innerHTML=`<div style="background:#fff;border-radius:10px;max-width:640px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:16px">
+    <div style="font-weight:700;font-size:15px;margin-bottom:6px">Excelに載っていない牛が ${keys.length}頭 マップに残っています</div>
+    <div style="font-size:12px;color:#444;margin-bottom:6px">${Object.keys(per).map(n=>`${esc(n)} ${per[n]}頭`).join('／')}<br>
+      対象は今回のExcelに載っている牛舎のみ。F1（交雑）${f1kept}頭は対象外です。<br>
+      「出荷済みにする」を押すと、マップから消えます（データは残るので後から戻せます）。</div>
+    ${unresolved?`<div style="font-size:12px;color:#c00;margin-bottom:6px">⚠ 今回の取込みで照合できなかった行が ${unresolved}件 あります。その牛が含まれていないか確認してください。</div>`:''}
+    <div style="overflow:auto;border:1px solid #ddd;border-radius:6px;flex:1;min-height:120px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f3f3f3;position:sticky;top:0"><th style="padding:4px">牛舎</th><th>下5桁</th><th>個体識別番号</th><th>名号</th><th>性別</th><th>生年月日</th></tr></thead>
+        <tbody>${sorted.map(k=>{const c=cattle[k];return `<tr style="border-top:1px solid #eee;text-align:center"><td style="padding:3px">${esc(bn(c.barnId))}</td><td>${esc(String(c.fullId).slice(-5))}</td><td>${esc(c.fullId)}</td><td>${esc(c.name)}</td><td>${esc(c.sex)}</td><td>${esc(c.dob)}</td></tr>`;}).join('')}</tbody>
+      </table></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button id="stale-no" class="btn">何もしない</button>
+      <button id="stale-yes" class="btn btn-g">出荷済みにする（${keys.length}頭）</button>
+    </div></div>`;
+  document.body.appendChild(d);
+  document.getElementById('stale-no').onclick=()=>d.remove();
+  document.getElementById('stale-yes').onclick=()=>{
+    keys.forEach(k=>{if(cattle[k])cattle[k].shipped=true;});
+    saveToStorage();
+    try{renderMap();}catch(e){}
+    const m=document.getElementById('done-msg');if(m)m.textContent+=`／Excelになかった ${keys.length}頭を出荷済みにしました`;
+    d.remove();
+  };
 }
 function nextInput(){
   document.getElementById('done-area').style.display='none';
