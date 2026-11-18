@@ -555,6 +555,7 @@ tbody tr:last-child td{border-bottom:none}
     </label>
     <button class="btn btn-sm" onclick="goPage('inp')">＋ 一括入力へ</button>
     <button class="btn btn-sm" onclick="exportExcel()" style="background:#217346;color:#fff;border-color:#155724">📊 Excel出力</button>
+    <button class="btn btn-sm" onclick="exportCattleList()" style="background:#217346;color:#fff;border-color:#155724" title="牛を1頭1行で一覧にしたExcel（台帳との突き合わせ用）">📋 牛一覧Excel</button>
     <button class="btn btn-sm" onclick="printMap()" style="background:#1a5276;color:#fff;border-color:#0d3349">🖨️ 印刷</button>
     <div id="sync-bar" title="Cloudflare Workers 同期">
       <span class="sync-icon">☁️</span>
@@ -2430,6 +2431,25 @@ function storageInfo() {
   const cnt = Object.values(cattle).filter(c=>c&&!c.shipped).length;
   const saved = localStorage.getItem(LS_CATTLE);
   return saved ? cnt + '頭のデータが保存済み' : '未保存';
+}
+
+// 牛を1頭1行で出力（台帳との突き合わせ用）。出荷済みは含めない。
+function exportCattleList(){
+  const order=BARNS.map(b=>b.id);
+  const bn=id=>(BARNS.find(x=>x.id===id)||{name:id}).name;
+  const list=Object.keys(cattle).map(k=>cattle[k]).filter(c=>c&&!c.shipped&&c.fullId);
+  list.sort((a,b)=>order.indexOf(a.barnId)-order.indexOf(b.barnId)||(a.pen||0)-(b.pen||0)||(a.idx||0)-(b.idx||0));
+  const aoa=[['牛舎','下5桁','個体識別番号','名号','性別','生年月日','月齢','品種','ランク','治療回数','導入日']];
+  list.forEach(c=>aoa.push([bn(c.barnId),String(c.fullId).slice(-5),String(c.fullId),c.name||'',c.sex||'',c.dob||'',c.age==null?'':c.age,c.breed||'',c.sickRank||0,c.treatCount||0,c.introDate||'']));
+  const per={};list.forEach(c=>{const n=bn(c.barnId);per[n]=(per[n]||0)+1;});
+  const sum=[['牛舎','頭数']];BARNS.forEach(b=>{if(per[b.name])sum.push([b.name,per[b.name]]);});sum.push(['合計',list.length]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:8},{wch:8},{wch:14},{wch:14},{wch:8},{wch:12},{wch:6},{wch:10},{wch:6},{wch:8},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'牛一覧');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'牛舎別頭数');
+  const d=new Date(),ds=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  XLSX.writeFile(wb,'牛一覧_'+ds+'.xlsx');
 }
 
 function exportExcel() {
