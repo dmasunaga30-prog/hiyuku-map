@@ -421,7 +421,7 @@ tbody tr:last-child td{border-bottom:none}
         <input type="file" id="eartag-excel-input" accept=".xlsx" style="display:none" onchange="importEartagExcel(this)">
       </label>
       <span style="font-size:11px;color:#888;margin-left:8px">シート名「本体X」→「X号舎」、「M-X」→「M-X」として自動照合して下に追加します</span>
-      <button class="btn" style="margin-left:8px" onclick="dedupeCattle()" title="同じ個体識別番号が2頭以上いる場合に1頭へまとめます">🧹 重複牛を整理</button>
+      <button class="btn" style="margin-left:8px;color:#b03a12;border-color:#b03a12" onclick="clearAllCattle()" title="マップ上の牛をすべて消去します（消す前に牛一覧Excelを自動保存）">🗑 マップの牛を全消去</button>
     </div>
     <div class="notice">個体識別番号の<strong>下5桁</strong>を入力すると自動照合。候補が複数ある場合はダイアログが開きます。Enter/Tabで次行へ移動。</div>
     <div class="tw" style="max-height:460px;overflow-y:auto">
@@ -1718,6 +1718,22 @@ function doRegister(){
   if(_stale.length)showStaleDialog(_stale,_f1kept,_unresolved);
   document.getElementById('done-area').scrollIntoView({behavior:'smooth'});
 }
+// ── マップ上の牛を全消去（牛舎の構成・台帳・治療記録は消さない）──
+// 消す前に「牛一覧Excel」を自動ダウンロードしてバックアップする。
+function clearAllCattle(){
+  const n=Object.values(cattle).filter(c=>c&&!c.shipped).length;
+  if(!confirm(`マップ上の牛 ${n}頭 をすべて消去します。\n\n・ランク・治療回数もすべて消えます\n・牛舎の構成、肥育台帳、治療記録は消えません\n・消す前に「牛一覧Excel」を自動で保存します\n\n続けますか？`))return;
+  try{exportCattleList();}catch(e){
+    if(!confirm('バックアップ用Excelの保存に失敗しました。それでも消去しますか？'))return;
+  }
+  if(!confirm('本当に消去しますか？（この操作は元に戻せません。クラウドに保存済みのデータは消えません）'))return;
+  cattle={};selKey=null;
+  try{selectedCells&&selectedCells.clear&&selectedCells.clear();}catch(e){}
+  saveToStorage();
+  try{renderMap();}catch(e){}
+  alert('マップ上の牛を消去しました。続けて「Excelから一括登録」で取り込んでください。');
+}
+
 // ── 重複牛の整理（同じ個体識別番号が複数いる場合に1頭へまとめる）──
 // 保存データの並び順で「後ろ」＝新しく登録された方を残す。牛舎は新しい方、ランク・治療回数は古い方から引き継ぐ。
 function dedupeCattle(){
@@ -1864,11 +1880,22 @@ async function importEartagExcel(input){
     added.forEach(a=>{
       rows.push({tag5:a.tag5, barnId:a.barnId, pen:'', lookup:null, status:'searching', rank:0});
     });
+    // 候補が複数ある場合の自動選択：
+    //  ①候補のうち、既にマップにいる牛が1頭だけ → その牛  ②出荷済みでない候補が1頭だけ → その牛
+    const _inMap={};
+    Object.keys(cattle).forEach(k=>{const c=cattle[k];if(c&&c.fullId&&!c.shipped)_inMap[c.fullId]=1;});
+    let nAutoMap=0,nAutoAct=0;
     for(let i=startIdx;i<rows.length;i++){
       const res = DB[rows[i].tag5];
       if(!res){ rows[i].status='notfound'; rows[i].lookup=null; }
       else if(res.length===1){ rows[i].status='found'; rows[i].lookup=res[0]; }
-      else { rows[i].status='multi'; rows[i].lookup=null; }
+      else {
+        const inMap=res.filter(c=>_inMap[c[0]]);
+        const active=res.filter(c=>!c[8]);
+        if(inMap.length===1){ rows[i].status='found'; rows[i].lookup=inMap[0]; nAutoMap++; }
+        else if(!inMap.length&&active.length===1){ rows[i].status='found'; rows[i].lookup=active[0]; nAutoAct++; }
+        else { rows[i].status='multi'; rows[i].lookup=null; }
+      }
     }
     let html='';
     for(let i=startIdx;i<rows.length;i++) html+=buildRow(i);
@@ -1879,6 +1906,7 @@ async function importEartagExcel(input){
     const nMulti = added_.filter(r=>r.status==='multi').length;
     const nNf = added_.filter(r=>r.status==='notfound').length;
     let msg = `Excelから${added.length}頭ぶんを読み込みました（照合済 ${nFound} / 候補複数 ${nMulti}・各行の●をクリックで選択 / 台帳未登録 ${nNf}）。`;
+    if(nAutoMap||nAutoAct) msg += `\n\n候補が複数あった行のうち、自動で選んだもの：既にマップにいる牛 ${nAutoMap}頭／出荷済みでない牛 ${nAutoAct}頭`;
     if(unmatched.length) msg += '\n\n未対応のシート（スキップしました）: '+unmatched.join('、');
     alert(msg);
     document.getElementById('ebody').parentElement.scrollIntoView({behavior:'smooth'});
