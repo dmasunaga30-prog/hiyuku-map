@@ -1146,13 +1146,32 @@ async function parseLedgerExcel(arrayBuffer, statusCallback) {
       const shipPriceCol2 = shipDateCol2 + 1;
       const shipDateVal2 = row[shipDateCol2];
       const shipPriceVal2 = row[shipPriceCol2] ? String(row[shipPriceCol2]).trim() : '';
-      const isShipped = !!(shipDateVal2) || shipPriceVal2.includes('死亡') || shipPriceVal2.includes('緊急');
-      tag5map[tag5].push([fullId, name, sex, dobStr || '', Math.floor(age), breed, introStr, origin, isShipped]);
+      // 出荷日が「今日より後」の場合は出荷予定（まだ牛舎にいる）として、出荷済みにしない
+      const _shipD = _parseShipDate(shipDateVal2);
+      const _today = new Date(); _today.setHours(0,0,0,0);
+      const _isPlanned = !!(_shipD && _shipD > _today) && !shipPriceVal2.includes('死亡') && !shipPriceVal2.includes('緊急');
+      const isShipped = !_isPlanned && (!!(shipDateVal2) || shipPriceVal2.includes('死亡') || shipPriceVal2.includes('緊急'));
+      // 出荷日・区分（出荷／死亡／緊急）も保持して、確認画面で見られるようにする
+      let shipDateStr = '';
+      if (_shipD) { const _z = n => String(n).padStart(2,'0'); shipDateStr = _shipD.getFullYear()+'-'+_z(_shipD.getMonth()+1)+'-'+_z(_shipD.getDate()); }
+      else if (shipDateVal2) shipDateStr = String(shipDateVal2).trim();
+      const shipKind = shipPriceVal2.includes('死亡') ? '死亡' : shipPriceVal2.includes('緊急') ? '緊急' : (_isPlanned ? '出荷予定' : (shipDateVal2 ? '出荷' : ''));
+      tag5map[tag5].push([fullId, name, sex, dobStr || '', Math.floor(age), breed, introStr, origin, isShipped, shipDateStr, shipKind]);
     }
   }
 
   statusCallback('完了');
   return tag5map;
+}
+
+// 出荷日セルの値（Date／Excelシリアル値／「2026/12/12 姫路」のような文字列）を日付にする
+function _parseShipDate(v){
+  if(!v) return null;
+  if(v instanceof Date) return isNaN(v) ? null : new Date(v.getFullYear(), v.getMonth(), v.getDate());
+  if(typeof v === 'number'){ const d = new Date((v-25569)*86400*1000); return isNaN(d) ? null : new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); }
+  const m = String(v).match(/(\d{4})\s*[\/\-.年]\s*(\d{1,2})\s*[\/\-.月]\s*(\d{1,2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  return null;
 }
 
 // 肥育台帳から死亡・緊急と畜を収集（parseLedgerExcelと同じXLSXオブジェクトを使う想定）
@@ -1617,7 +1636,7 @@ function classifyRows(){
     if(r.status==='notfound')st='notfound';
     else if(r.status!=='found'||!r.lookup)st='unresolved';
     else if(!r.barnId)st='nobarn';
-    else if(r.lookup[8])st='shipped';
+    else if(r.lookup[8]&&!r.force)st='shipped';
     else if(seen[r.lookup[0]]!=null){st='dup';first=seen[r.lookup[0]];}
     else{st='ok';seen[r.lookup[0]]=i;}
     out.push({i,r,st,first});
@@ -1625,7 +1644,38 @@ function classifyRows(){
   return out;
 }
 function esc_(s){return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
-function goConfirm(){
+// 台帳の出荷区分（出荷／死亡／緊急）。台帳を読み込み直す前の古いDBでは空になる
+function _shipKind(lu){return (lu&&lu[10])||'出荷';}
+// 登録されない牛を種類別にExcel出力
+function exportSkipped(){
+  const cls=classifyRows().filter(x=>x.st!=='ok');
+  if(!cls.length){alert('スキップされる牛はありません。');return;}
+  const bnm=id=>id?(BARNS.find(x=>x.id===id)||{name:'—'}).name:'（未選択）';
+  const label={dup:'同じ牛が重複',shipped:'台帳で出荷・死亡扱い',unresolved:'候補が未選択',notfound:'台帳未登録',nobarn:'牛舎未選択'};
+  const rank={dup:0,shipped:1,unresolved:2,notfound:3,nobarn:4};
+  cls.sort((a,b)=>rank[a.st]-rank[b.st]||a.i-b.i);
+  const aoa=[['種類','牛舎','下5桁','個体識別番号','名号','性別','生年月日','月齢','台帳の区分','出荷日','備考']];
+  cls.forEach(x=>{
+    const r=x.r,lu=r.lookup;
+    let kind='',date='',note='';
+    if(x.st==='shipped'){kind=_shipKind(lu);date=lu[9]||'';}
+    if(x.st==='dup')note=`${bnm(rows[x.first].barnId)}の${rows[x.first].tag5}と同じ牛`;
+    aoa.push([label[x.st],bnm(r.barnId),r.tag5,lu?lu[0]:'',lu?lu[1]:'',lu?(SEX_MAP[lu[2]]||lu[2]):'',lu?lu[3]:'',lu?lu[4]:'',kind,date,note]);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:18},{wch:8},{wch:8},{wch:14},{wch:14},{wch:8},{wch:12},{wch:6},{wch:10},{wch:12},{wch:28}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'スキップされる牛');
+  const d=new Date(),ds=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  XLSX.writeFile(wb,'スキップされる牛_'+ds+'.xlsx');
+}
+// 出荷・死亡扱いの牛を登録対象に戻す／外す（確認画面のチェックボックスから）
+function toggleForce(i,v){rows[i].force=!!v;goConfirm(true);}
+function forceAllShipped(v){
+  rows.forEach(r=>{if(r.status==='found'&&r.lookup&&r.lookup[8])r.force=!!v;});
+  goConfirm(true);
+}
+function goConfirm(keep){
+  const _sc=document.querySelector('#confirm-area .tw');const _st=_sc?_sc.scrollTop:0;
   const cls=classifyRows();
   if(!cls.some(x=>x.r.status==='found')){alert('照合済みのデータがありません。');return;}
   const cnt=s=>cls.filter(x=>x.st===s).length;
@@ -1633,10 +1683,16 @@ function goConfirm(){
   document.getElementById('csumm').innerHTML=
     `<span class="chip c-ok">登録対象 ${cnt('ok')}頭</span>`+
     (cnt('dup')?`<span class="chip c-er">同じ牛が重複 ${cnt('dup')}頭（後の行をスキップ）</span>`:'')+
-    (cnt('shipped')?`<span class="chip c-wn">台帳で出荷済み・死亡扱い ${cnt('shipped')}頭（スキップ）</span>`:'')+
+    (cnt('shipped')?`<span class="chip c-wn">台帳で出荷済み・死亡扱い ${cnt('shipped')}頭（スキップ）：出荷 ${cls.filter(x=>x.st==='shipped'&&_shipKind(x.r.lookup)==='出荷').length}／死亡 ${cls.filter(x=>x.st==='shipped'&&_shipKind(x.r.lookup)==='死亡').length}／緊急と畜 ${cls.filter(x=>x.st==='shipped'&&_shipKind(x.r.lookup)==='緊急').length}</span>`:'')+
     (cnt('unresolved')?`<span class="chip c-wn">候補が未選択 ${cnt('unresolved')}頭（スキップ）</span>`:'')+
     (cnt('notfound')?`<span class="chip c-er">台帳未登録 ${cnt('notfound')}頭（スキップ）</span>`:'')+
-    (cnt('nobarn')?`<span class="chip c-wn">牛舎未選択 ${cnt('nobarn')}頭（スキップ）</span>`:'');
+    (cnt('nobarn')?`<span class="chip c-wn">牛舎未選択 ${cnt('nobarn')}頭（スキップ）</span>`:'')+
+    (()=>{const n=cls.filter(x=>x.st==='ok'&&x.r.lookup&&x.r.lookup[10]==='出荷予定').length;
+      return n?`<span class="chip c-ok">出荷予定（台帳の出荷日が今日より先）${n}頭は牛舎にいる扱いで登録</span>`:'';})()+
+    (()=>{const n=cls.filter(x=>x.st==='ok'&&x.r.force).length;
+      return n?`<span class="chip c-wn">出荷・死亡扱いから復元して登録 ${n}頭</span>`:'';})()+
+    ((cnt('shipped')||cls.some(x=>x.r.force))?` <button class="btn btn-sm" onclick="forceAllShipped(true)" title="台帳で出荷・死亡扱いの牛を、すべて登録対象にします">↩ 出荷・死亡扱いをすべて登録する</button> <button class="btn btn-sm" onclick="forceAllShipped(false)">すべて外す</button>`:'')+
+    ((cls.length-cnt('ok'))?` <button class="btn btn-sm" onclick="exportSkipped()" title="登録されない牛を種類別にExcelで保存します">📥 スキップされる牛をExcel出力</button>`:'');
   // 問題のある行を先頭に出す
   const rank={dup:0,shipped:1,unresolved:2,notfound:3,nobarn:4,ok:5};
   const sorted=cls.slice().sort((a,b)=>rank[a.st]-rank[b.st]||a.i-b.i);
@@ -1646,8 +1702,10 @@ function goConfirm(){
       if(x.st==='unresolved')return`<tr><td>${r.tag5}</td><td colspan="5" style="color:#b36b00">候補が複数あり、まだ選択されていません</td><td>${bname}</td><td><span class="badge bsk">未選択</span></td></tr>`;
       let badge;
       if(x.st==='dup')badge=`<span class="badge berr">重複（${esc_(bnm(rows[x.first].barnId))}の${esc_(rows[x.first].tag5)}と同じ牛）</span>`;
-      else if(x.st==='shipped')badge='<span class="badge bsk">出荷済み扱い</span>';
+      else if(x.st==='shipped'){const k=_shipKind(lu),d=lu[9]||'';badge=`<span class="badge bsk">${esc_(k==='死亡'?'死亡':k==='緊急'?'緊急と畜':'出荷済み')}${d?' '+esc_(d):''}</span> <label style="font-size:11px;cursor:pointer"><input type="checkbox" onchange="toggleForce(${x.i},this.checked)"> 登録する</label>`;}
       else if(x.st==='nobarn')badge='<span class="badge bsk">牛舎なし</span>';
+      else if(x.r.force){const k=_shipKind(lu),d=lu[9]||'';badge=`<span class="badge bok">復元して登録（${esc_(k==='死亡'?'死亡':k==='緊急'?'緊急と畜':'出荷済み')}${d?' '+esc_(d):''}）</span> <label style="font-size:11px;cursor:pointer"><input type="checkbox" checked onchange="toggleForce(${x.i},this.checked)"> 登録する</label>`;}
+      else if(lu&&lu[10]==='出荷予定')badge=`<span class="badge bok">登録（出荷予定 ${esc_(lu[9]||'')}）</span>`;
       else badge='<span class="badge bok">登録</span>';
       return`<tr class="${x.st==='ok'?'rok':''}">
         <td>${r.tag5}</td><td>${lu[0]}</td><td>${lu[1]||'—'}</td>
@@ -1658,11 +1716,12 @@ function goConfirm(){
     }).join('');
   document.getElementById('confirm-area').style.display='block';
   document.getElementById('done-area').style.display='none';
-  document.getElementById('confirm-area').scrollIntoView({behavior:'smooth'});
+  if(keep===true){const sc=document.querySelector('#confirm-area .tw');if(sc)sc.scrollTop=_st;}
+  else document.getElementById('confirm-area').scrollIntoView({behavior:'smooth'});
 }
 function doRegister(){
   let ok=0, nSame=0, nMove=0, nBatchDup=0, nNoSlot=0;
-  const targets=rows.filter(r=>r.status==='found'&&r.barnId&&r.lookup&&!r.lookup[8]);
+  const targets=rows.filter(r=>r.status==='found'&&r.barnId&&r.lookup&&(!r.lookup[8]||r.force));
   // 既存の牛（出荷済み以外）を個体識別番号で引けるようにする
   const _existing={};
   Object.keys(cattle).forEach(k=>{const c=cattle[k];if(c&&c.fullId&&!c.shipped)_existing[c.fullId]=k;});
