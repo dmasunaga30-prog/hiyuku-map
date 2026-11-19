@@ -1606,25 +1606,54 @@ function cancelMod(){closeMod();}
 function closeMod(e){if(e&&e.target!==document.getElementById('mbg'))return;document.getElementById('mbg').style.display='none';modalCB=null;}
 
 // ── 確認・登録 ──
+// 入力行を「登録される／されない」に分類する（確認画面と登録処理で共通）
+//  ok=登録される / dup=同じ牛が既に別の行にある / shipped=台帳で出荷済み・死亡扱い
+//  notfound=台帳に無い / unresolved=候補が複数あって未選択 / nobarn=牛舎未選択
+function classifyRows(){
+  const seen={};const out=[];
+  rows.forEach((r,i)=>{
+    if(!r.tag5||r.tag5.length!==5)return;
+    let st,first=null;
+    if(r.status==='notfound')st='notfound';
+    else if(r.status!=='found'||!r.lookup)st='unresolved';
+    else if(!r.barnId)st='nobarn';
+    else if(r.lookup[8])st='shipped';
+    else if(seen[r.lookup[0]]!=null){st='dup';first=seen[r.lookup[0]];}
+    else{st='ok';seen[r.lookup[0]]=i;}
+    out.push({i,r,st,first});
+  });
+  return out;
+}
+function esc_(s){return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
 function goConfirm(){
-  const valid=rows.filter(r=>r.status==='found'&&r.lookup);
-  if(!valid.length){alert('照合済みのデータがありません。');return;}
-  const nf=rows.filter(r=>r.status==='notfound').length;
-  const nb=valid.filter(r=>!r.barnId).length;
+  const cls=classifyRows();
+  if(!cls.some(x=>x.r.status==='found')){alert('照合済みのデータがありません。');return;}
+  const cnt=s=>cls.filter(x=>x.st===s).length;
+  const bnm=id=>id?(BARNS.find(x=>x.id===id)||{name:'—'}).name:'（未選択）';
   document.getElementById('csumm').innerHTML=
-    `<span class="chip c-ok">登録対象 ${valid.length}頭</span>`+
-    (nf?`<span class="chip c-er">台帳未登録 ${nf}頭（スキップ）</span>`:'')+
-    (nb?`<span class="chip c-wn">牛舎未選択 ${nb}頭（スキップ）</span>`:'');
-  document.getElementById('cbody').innerHTML=
-    rows.filter(r=>r.status==='found'||r.status==='notfound').map(r=>{
-      if(r.status==='notfound')return`<tr><td>${r.tag5}</td><td colspan="7" style="color:#c00">台帳未登録</td><td><span class="badge berr">スキップ</span></td></tr>`;
-      const lu=r.lookup;
-      const bname=r.barnId?(BARNS.find(x=>x.id===r.barnId)||{name:'—'}).name:'（未選択）';
-      return`<tr class="${r.barnId?'rok':''}">
+    `<span class="chip c-ok">登録対象 ${cnt('ok')}頭</span>`+
+    (cnt('dup')?`<span class="chip c-er">同じ牛が重複 ${cnt('dup')}頭（後の行をスキップ）</span>`:'')+
+    (cnt('shipped')?`<span class="chip c-wn">台帳で出荷済み・死亡扱い ${cnt('shipped')}頭（スキップ）</span>`:'')+
+    (cnt('unresolved')?`<span class="chip c-wn">候補が未選択 ${cnt('unresolved')}頭（スキップ）</span>`:'')+
+    (cnt('notfound')?`<span class="chip c-er">台帳未登録 ${cnt('notfound')}頭（スキップ）</span>`:'')+
+    (cnt('nobarn')?`<span class="chip c-wn">牛舎未選択 ${cnt('nobarn')}頭（スキップ）</span>`:'');
+  // 問題のある行を先頭に出す
+  const rank={dup:0,shipped:1,unresolved:2,notfound:3,nobarn:4,ok:5};
+  const sorted=cls.slice().sort((a,b)=>rank[a.st]-rank[b.st]||a.i-b.i);
+  document.getElementById('cbody').innerHTML=sorted.map(x=>{
+      const r=x.r,lu=r.lookup,bname=bnm(r.barnId);
+      if(x.st==='notfound')return`<tr><td>${r.tag5}</td><td colspan="5" style="color:#c00">台帳未登録</td><td>${bname}</td><td><span class="badge berr">スキップ</span></td></tr>`;
+      if(x.st==='unresolved')return`<tr><td>${r.tag5}</td><td colspan="5" style="color:#b36b00">候補が複数あり、まだ選択されていません</td><td>${bname}</td><td><span class="badge bsk">未選択</span></td></tr>`;
+      let badge;
+      if(x.st==='dup')badge=`<span class="badge berr">重複（${esc_(bnm(rows[x.first].barnId))}の${esc_(rows[x.first].tag5)}と同じ牛）</span>`;
+      else if(x.st==='shipped')badge='<span class="badge bsk">出荷済み扱い</span>';
+      else if(x.st==='nobarn')badge='<span class="badge bsk">牛舎なし</span>';
+      else badge='<span class="badge bok">登録</span>';
+      return`<tr class="${x.st==='ok'?'rok':''}">
         <td>${r.tag5}</td><td>${lu[0]}</td><td>${lu[1]||'—'}</td>
         <td>${SEX_MAP[lu[2]]||lu[2]}</td><td>${lu[3]}</td><td>${lu[4]}ヶ月</td>
         <td style="${!r.barnId?'color:#c00':''}">${bname}</td>
-        <td>${r.barnId?'<span class="badge bok">登録</span>':'<span class="badge bsk">牛舎なし</span>'}</td>
+        <td>${badge}</td>
       </tr>`;
     }).join('');
   document.getElementById('confirm-area').style.display='block';
@@ -1648,8 +1677,12 @@ function doRegister(){
       else if(cattle[ek].barnId===r.barnId)pSame++;
       else pMove++;
     });
-    if(pSame||pMove||pDup){
-      const msg=`登録内容の確認\n\n新規登録：${pNew}頭\n既に同じ牛舎にいる（スキップ）：${pSame}頭\n別の牛舎から移動（ランク・治療回数は引き継ぎ）：${pMove}頭\n選択の重複（同じ牛を2回選択・スキップ）：${pDup}頭\n\nこの内容で登録しますか？`;
+    const _c=classifyRows();
+    const pShip=_c.filter(x=>x.st==='shipped').length;
+    const pUnres=_c.filter(x=>x.st==='unresolved').length;
+    const pNf=_c.filter(x=>x.st==='notfound').length;
+    if(pSame||pMove||pDup||pShip||pUnres||pNf){
+      const msg=`登録内容の確認\n\n新規登録：${pNew}頭\n既に同じ牛舎にいる（スキップ）：${pSame}頭\n別の牛舎から移動（ランク・治療回数は引き継ぎ）：${pMove}頭\n同じ牛が複数の行にある（後の行をスキップ）：${pDup}頭\n台帳で出荷済み・死亡扱い（スキップ）：${pShip}頭\n候補が未選択（スキップ）：${pUnres}頭\n台帳未登録（スキップ）：${pNf}頭\n\nこの内容で登録しますか？`;
       if(!confirm(msg))return;
     }
   }
@@ -1886,15 +1919,18 @@ async function importEartagExcel(input){
     const _inMap={};
     Object.keys(cattle).forEach(k=>{const c=cattle[k];if(c&&c.fullId&&!c.shipped)_inMap[c.fullId]=1;});
     let nAutoMap=0,nAutoAct=0;
+    // 同じ牛を2つの行に自動で割り当てないよう、この取込みで使った牛を記録する
+    const _used={};
     for(let i=startIdx;i<rows.length;i++){
       const res = DB[rows[i].tag5];
       if(!res){ rows[i].status='notfound'; rows[i].lookup=null; }
-      else if(res.length===1){ rows[i].status='found'; rows[i].lookup=res[0]; }
+      else if(res.length===1){ rows[i].status='found'; rows[i].lookup=res[0]; _used[res[0][0]]=1; }
       else {
-        const inMap=res.filter(c=>_inMap[c[0]]);
-        const active=res.filter(c=>!c[8]);
-        if(inMap.length===1){ rows[i].status='found'; rows[i].lookup=inMap[0]; nAutoMap++; }
-        else if(!inMap.length&&active.length===1){ rows[i].status='found'; rows[i].lookup=active[0]; nAutoAct++; }
+        const avail=res.filter(c=>!_used[c[0]]);
+        const inMap=avail.filter(c=>_inMap[c[0]]);
+        const active=avail.filter(c=>!c[8]);
+        if(inMap.length===1){ rows[i].status='found'; rows[i].lookup=inMap[0]; _used[inMap[0][0]]=1; nAutoMap++; }
+        else if(!inMap.length&&active.length===1){ rows[i].status='found'; rows[i].lookup=active[0]; _used[active[0][0]]=1; nAutoAct++; }
         else { rows[i].status='multi'; rows[i].lookup=null; }
       }
     }
