@@ -1832,7 +1832,8 @@ function _eartagBarnFor(sheetName){
   let m;
   if((m = sheetName.match(/^本体\s*([0-9]+)$/))){
     const target = m[1] + '号舎';
-    return BARNS.find(x=>x.name===target) || null;
+    // 「N号舎」の他に、牛舎名が数字だけ（13・14など）や牛舎IDがNのものも探す
+    return BARNS.find(x=>x.name===target) || BARNS.find(x=>x.name===m[1]) || BARNS.find(x=>x.id===m[1]) || null;
   }
   if((m = sheetName.match(/^M-?\s*([0-9]+)$/i))){
     const target = 'M-' + m[1];
