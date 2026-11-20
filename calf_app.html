@@ -195,7 +195,8 @@ textarea{resize:vertical;min-height:60px;}
     </div>
     <div class="sec"><div class="sec-ttl">評価タイミング</div>
       <div class="eval-type-row">
-        <button class="eval-type-btn on" onclick="setEvalType('7日',this)">7日齢</button>
+        <button class="eval-type-btn" onclick="setEvalType('7日',this)">7日齢</button>
+        <button class="eval-type-btn on" onclick="setEvalType('14日',this)">14日齢（判定用）</button>
         <button class="eval-type-btn" onclick="setEvalType('その他',this)">その他（20日前後）</button>
       </div>
       <div class="g2">
@@ -277,6 +278,16 @@ textarea{resize:vertical;min-height:60px;}
   <div id="list-wrap"></div>
 </div>
 
+<!-- ════ PAGE: 分娩室判定 ════ -->
+<div class="pg" id="pg-judge">
+  <div class="step-tabs">
+    <button class="step-tab on" id="jt-now" onclick="judgeView='now';renderJudge()">分娩室の子牛</button>
+    <button class="step-tab" id="jt-past" onclick="judgeView='past';renderJudge()">過去の個体の評価</button>
+    <button class="step-tab" id="jt-rule" onclick="judgeView='rule';renderJudge()">判定のしくみ</button>
+  </div>
+  <div id="judge-wrap"></div>
+</div>
+
 <!-- ════ PAGE: 詳細 ════ -->
 <div class="pg" id="pg-detail"><div id="detail-wrap"></div></div>
 
@@ -313,7 +324,10 @@ textarea{resize:vertical;min-height:60px;}
 
   <div class="sec"><div class="sec-ttl">mowment 治療記録取り込み</div>
     <div class="card">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">mowmentから全頭まとめてエクスポートしたExcelでOK。登録済みの個体だけ自動抽出して取り込みます。</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">mowmentから全頭まとめてエクスポートしたExcelでOK。登録済みの個体だけ自動抽出して取り込みます。<br>
+        ・治療記録（download_*.xlsx）→ 治療・体温・居場所<br>
+        ・牛一覧（list_*.xlsx）→ その日の居場所（治療していない子牛の移動も分かる）<br>
+        複数ファイルをまとめて選択できます。重複は自動で除外されます。</div>
       <div class="import-zone">
         <input type="file" accept=".xlsx" multiple onchange="handleImportFiles(this)">
         <div class="iz-ico">📂</div>
@@ -369,6 +383,9 @@ textarea{resize:vertical;min-height:60px;}
   </button>
   <button class="nb" onclick="showPg('list',this);renderList();">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>一覧
+  </button>
+  <button class="nb" onclick="showPg('judge',this);renderJudge();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>判定
   </button>
   <button class="nb" onclick="showPg('set',this);">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>設定
@@ -1000,6 +1017,7 @@ function calcDripDays(treats){
 // ══════ 親付け適性の自動判定（4段階） ══════
 // 重症度 3:死亡 > 2:哺育移動 > 1:9号移動 > 0:親付け継続（成功）
 const WEAN_AGE = 120;
+const WEAN_MOVE_AGE = 90; // これ以降の哺育/育成への移動は離乳（失敗扱いしない）
 
 function fosterResult(a){
   const fu=a.followup||{};
@@ -1017,7 +1035,10 @@ function fosterResult(a){
     return {label:'評価中', severity:-1, reason:'親付け前', cls:'pending'};
   }
 
-  const afterFoster=moves.slice(fosterIdx+1);
+  // 離乳（育成舎へ移動 or 90日齢以降の移動）より後は判定に使わない
+  const weanIdx=moves.findIndex((m,i)=>i>fosterIdx&&(m.category==='育成'||(m.category==='哺育'&&m.age>=WEAN_MOVE_AGE)));
+  const afterFoster=moves.slice(fosterIdx+1, weanIdx<0?undefined:weanIdx);
+  const weaned=weanIdx>=0?moves[weanIdx]:null;
 
   // 親付け後に哺育へ = 重症度2
   const toFoster=afterFoster.find(m=>m.category==='哺育');
@@ -1035,6 +1056,7 @@ function fosterResult(a){
   // 移動なし → 120日齢到達判定（成功）
   const fosterAge=moves[fosterIdx].age;
   const daysSinceBirth = a.dob ? Math.round((Date.now()-new Date(a.dob))/(1000*60*60*24)) : 0;
+  if(weaned) return {label:'親付け継続', severity:0, reason:`親付け（${fosterAge}日齢）→離乳・${weaned.room}へ（${weaned.age}日齢）`, cls:'success'};
   if(daysSinceBirth>=WEAN_AGE) return {label:'親付け継続', severity:0, reason:`親付け（${fosterAge}日齢）→${WEAN_AGE}日齢まで移動なし`, cls:'success'};
   return {label:'評価中', severity:-1, reason:`親付け中（現在${daysSinceBirth}日齢／${WEAN_AGE}日で確定）`, cls:'pending'};
 }
@@ -1047,6 +1069,222 @@ function fosterStyle(cls){
     :cls==='death'?{c:'var(--C)',ic:'☠️'}
     :cls==='pending'?{c:'var(--text2)',ic:'⏳'}
     :{c:'var(--text3)',ic:'−'};
+}
+
+// ══════ 分娩室での親付け適性判定（リスク点数） ══════
+// 2026年5〜9月生まれで60日齢以上追跡できた491頭の実績から作成（2026-11-20）。
+// 「失敗」＝死亡・哺育行き・9号（弱牛区）行き。21日齢までの情報だけで点数化する。
+// 点数別の実績失敗率（%）：0点1 / 1点5 / 2点11 / 3点25 / 4点42 / 5点48 / 6点以上65
+const RISK_RATE={0:1,1:5,2:11,3:25,4:42,5:48,6:65};
+const RISK_BAND={
+  green :{label:'親付け適',        short:'適',  c:'var(--A)',  bg:'rgba(76,175,80,.12)',  ic:'🟢', rate:'3%',  act:'親付け牛舎へ'},
+  yellow:{label:'親付け可・要観察', short:'観察', c:'var(--warn)',bg:'rgba(232,168,74,.12)', ic:'🟡', rate:'16%', act:'親付け牛舎へ。移動後1〜2週は体重・治療を重点観察'},
+  red   :{label:'哺育推奨',        short:'哺育', c:'var(--C)',  bg:'rgba(244,67,54,.12)',  ic:'🔴', rate:'49%', act:'分娩室にいる間に哺育へ（親付けしない）'},
+};
+const RISK_DECIDE_AGE=21; // この日齢までの記録で判定
+const RISK_WEIGH_AGE=14;  // 体重測定の推奨日齢
+
+function calfAge(a,d=new Date()){ return a.dob?Math.floor((d-new Date(a.dob+'T00:00:00'))/864e5):null; }
+
+function riskJudge(a){
+  const ageNow=calfAge(a);
+  const tr=(a.treats||[]).filter(t=>t.age!=null&&t.age<=RISK_DECIDE_AGE&&!(t.dateStr&&treatOutOfRange(a,t.dateStr)));
+  const dayKey=t=>t.dateStr||('d'+t.age);
+  const daysOf=f=>new Set(tr.filter(f).map(dayKey)).size;
+  // 治療クール数：mowmentの治療内容が①で始まる＝新しいクール開始。手入力は3日以上空いたら新クール
+  let courses=tr.filter(t=>t.imported&&/^[①➀]/.test(String(t.content||'').trim())).length;
+  let last=-99;
+  tr.filter(t=>!t.imported).sort((x,y)=>x.age-y.age).forEach(t=>{ if(t.age-last>3) courses++; last=t.age; });
+  const drip=daysOf(t=>t.drip||/点滴/.test(t.drug||''));
+  const watery=daysOf(t=>/水溶性|血便/.test(t.symptom||''));
+  const fever=daysOf(t=>(parseTemp(t.temp)||0)>=40);
+  // DG：25日齢までに測った最新の体重（無ければ35日齢までの最初の体重）
+  const ws=(a.evals||[]).filter(e=>e.weight&&e.age>0).sort((x,y)=>x.age-y.age);
+  const ev=ws.filter(e=>e.age<=25).slice(-1)[0]||ws.find(e=>e.age<=35)||null;
+  const dg=(ev&&a.birthWeight)?(ev.weight-a.birthWeight)/ev.age:null;
+
+  const items=[];
+  if(dg!=null){
+    if(dg<0.4) items.push({t:`DG ${dg.toFixed(2)}（0.4未満・${ev.age}日齢）`,p:2});
+    else if(dg<0.6) items.push({t:`DG ${dg.toFixed(2)}（0.4〜0.6・${ev.age}日齢）`,p:1});
+  }
+  if(a.birthWeight&&a.birthWeight<34) items.push({t:`生時体重 ${a.birthWeight}kg（34kg未満）`,p:2});
+  if(parseInt(a.dystocia)>=2||/ドプラム|デキサ/.test(a.birthMemo||'')) items.push({t:'難産介助／ドプラム使用',p:1});
+  if(courses>=3) items.push({t:`治療 ${courses}クール（3以上）`,p:2});
+  else if(courses>=1) items.push({t:`治療 ${courses}クール`,p:1});
+  if(drip>=2) items.push({t:`点滴 ${drip}日`,p:1});
+  if(watery>=3) items.push({t:`水様便・血便 ${watery}日`,p:1});
+  if(fever>=4) items.push({t:`40℃以上 ${fever}日`,p:2});
+
+  const score=items.reduce((s,x)=>s+x.p,0);
+  const band=score>=4?'red':score>=2?'yellow':'green';
+  // 判定の確かさ
+  const notes=[];
+  let status='確定';
+  if(dg==null){
+    status='暫定';
+    notes.push(ageNow!=null&&ageNow<RISK_WEIGH_AGE?`${RISK_WEIGH_AGE}日齢で体重を測ると判定できます`:'体重未測定：体重を測って入力してください（DGが一番効く指標です）');
+  }
+  if(ageNow!=null&&ageNow<RISK_WEIGH_AGE){ status='暫定'; }
+  if(!a.birthWeight) notes.push('出生体重が未入力です');
+  const lastImport=(a.treats||[]).filter(t=>t.imported&&t.dateStr).map(t=>t.dateStr).sort().slice(-1)[0];
+  return {score,band,items,dg,courses,drip,watery,fever,status,notes,ageNow,rate:RISK_RATE[Math.min(score,6)],lastImport};
+}
+
+function riskBadge(r,big){
+  const b=RISK_BAND[r.band];
+  const sz=big?'font-size:15px;padding:6px 12px;':'font-size:11px;padding:2px 7px;';
+  return `<span style="display:inline-block;${sz}border-radius:6px;font-weight:800;background:${b.bg};color:${b.c};white-space:nowrap;">${b.ic}${big?b.label:b.short} ${r.score}点${r.status==='暫定'?'<span style="font-weight:400;opacity:.8">（暫定）</span>':''}</span>`;
+}
+
+// 最後に記録された居場所
+function lastRoom(a){ const m=(a.moves||[]).slice(-1)[0]; return m?m:null; }
+
+// ══════ 判定ページ ══════
+let judgeView='now';
+const JUDGE_MAX_AGE=35; // 「分娩室の子牛」に出す日齢の上限
+
+function decisionLabel(d){
+  if(!d||!d.choice) return '';
+  const m={'親付け':'🐄親付けへ決定','哺育':'🍼哺育へ決定','保留':'⏸保留'};
+  return `<span class="tag" style="color:var(--text)">${m[d.choice]||d.choice}</span>`;
+}
+
+function renderJudge(){
+  ['now','past','rule'].forEach(k=>{ const el=document.getElementById('jt-'+k); if(el) el.classList.toggle('on',judgeView===k); });
+  const wrap=document.getElementById('judge-wrap');
+  if(judgeView==='rule'){ wrap.innerHTML=judgeRuleHtml(); return; }
+  if(judgeView==='past'){ wrap.innerHTML=judgePastHtml(); return; }
+
+  // 分娩室の子牛：0〜35日齢で、まだ親付け・哺育に移っていない個体
+  const list=animals.map(a=>({a,r:riskJudge(a),fr:fosterResult(a),room:lastRoom(a)}))
+    .filter(x=>x.r.ageNow!=null&&x.r.ageNow>=0&&x.r.ageNow<=JUDGE_MAX_AGE&&(x.a.followup||{}).outcome!=='死亡')
+    .filter(x=>!x.room||x.room.category==='分娩室'||x.room.category==null||x.r.ageNow<=RISK_DECIDE_AGE);
+  const order={red:0,yellow:1,green:2};
+  list.sort((x,y)=>order[x.r.band]-order[y.r.band]||y.r.score-x.r.score||y.r.ageNow-x.r.ageNow);
+  const cnt={red:0,yellow:0,green:0}; list.forEach(x=>cnt[x.r.band]++);
+  const noWt=list.filter(x=>x.r.dg==null&&x.r.ageNow>=RISK_WEIGH_AGE).length;
+  const latestImport=animals.flatMap(a=>(a.treats||[]).filter(t=>t.imported&&t.dateStr).map(t=>t.dateStr)).sort().slice(-1)[0];
+
+  const rows=list.map(({a,r,room})=>{
+    const b=RISK_BAND[r.band];
+    const due=r.ageNow>=RISK_DECIDE_AGE-3?'<span style="color:var(--danger);font-weight:700">移動判断の時期</span>':r.ageNow>=RISK_WEIGH_AGE?'':`<span style="color:var(--text2)">あと${RISK_WEIGH_AGE-r.ageNow}日で体重測定</span>`;
+    return `<div class="li" onclick="showDetail('${a.key}')" style="border-left:4px solid ${b.c};padding-left:10px;">
+      <div class="li-info">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="li-id">${a.id5}</span>
+          <span style="font-size:12px;color:var(--text2)">${r.ageNow}日齢${room?' ・'+room.room:''} ・${a.sex==='雄'?'♂':'♀'}</span>
+          ${riskBadge(r)} ${decisionLabel(a.decision)}
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.6;">
+          ${r.items.length?r.items.map(i=>`${i.t}<b style="color:${b.c}">+${i.p}</b>`).join('　'):'リスク要因なし'}
+        </div>
+        <div style="font-size:11px;margin-top:3px;">${r.band==='red'?`<b style="color:var(--C)">→ ${b.act}</b>`:''} ${due} ${r.notes.length?`<span style="color:var(--warn)">${r.notes[0]}</span>`:''}</div>
+      </div>
+      <div class="li-arr">›</div>
+    </div>`;
+  }).join('');
+
+  wrap.innerHTML=`
+    <div class="stats">
+      <div class="stat"><div class="stat-n C">${cnt.red}</div><div class="stat-l">🔴哺育推奨</div></div>
+      <div class="stat"><div class="stat-n B">${cnt.yellow}</div><div class="stat-l">🟡要観察</div></div>
+      <div class="stat"><div class="stat-n A">${cnt.green}</div><div class="stat-l">🟢親付け適</div></div>
+    </div>
+    <div class="card-sm" style="font-size:11px;color:var(--text2);line-height:1.7">
+      対象：0〜${JUDGE_MAX_AGE}日齢（${list.length}頭）。${RISK_DECIDE_AGE}日齢までの記録で点数化します。<br>
+      ${noWt>0?`<b style="color:var(--warn)">⚠ ${RISK_WEIGH_AGE}日齢を過ぎて体重未測定：${noWt}頭</b>（評価入力タブで体重を入れると判定が確定します）<br>`:''}
+      治療データの最終取り込み：<b style="color:var(--text)">${latestImport||'なし'}</b>${latestImport&&(Date.now()-new Date(latestImport))/864e5>4?' <span style="color:var(--warn)">← mowmentの最新治療記録を設定タブから取り込んでください</span>':''}
+    </div>
+    <div class="card" style="padding:4px 12px;">${rows||'<div class="empty"><p>対象の子牛がいません（出生登録すると表示されます）</p></div>'}</div>`;
+}
+
+function judgePastHtml(){
+  // 判定（21日齢時点の点数）×実際の転帰
+  const outs=['親付け継続','9号移動','哺育','死亡'];
+  // 親付け中で60日齢を過ぎて問題なし＝親付け継続とみなす（失敗の9割以上は60日齢までに起きている）
+  const outOf=(fr,a)=>fr.label==='親付け継続'?'親付け継続':fr.label==='9号移動'?'9号移動':['哺育移動','哺育直行','親付け不成立'].includes(fr.label)?'哺育':fr.label==='死亡'?'死亡'
+    :(fr.label==='評価中'&&(a.moves||[]).some(m=>m.category==='親付け')&&calfAge(a)>=60)?'親付け継続':null;
+  const M={red:{},yellow:{},green:{}}; const tot={red:0,yellow:0,green:0};
+  const pend={red:0,yellow:0,green:0};
+  const done=[];
+  animals.forEach(a=>{
+    const r=riskJudge(a); const o=outOf(fosterResult(a),a);
+    if(r.ageNow!=null&&r.ageNow<RISK_DECIDE_AGE) return;
+    if(!o){ pend[r.band]++; return; }
+    M[r.band][o]=(M[r.band][o]||0)+1; tot[r.band]++; done.push({a,r,o});
+  });
+  const n=tot.red+tot.yellow+tot.green;
+  const fails=b=>outs.slice(1).reduce((s,o)=>s+(M[b][o]||0),0);
+  const allFail=['red','yellow','green'].reduce((s,b)=>s+fails(b),0);
+  const tbl=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:380px">
+    <thead><tr style="background:var(--surf2)"><th style="padding:7px 6px;text-align:left">判定</th><th style="padding:7px 6px;text-align:right">頭数</th>
+      ${outs.map(o=>`<th style="padding:7px 6px;text-align:right">${o}</th>`).join('')}<th style="padding:7px 6px;text-align:right">失敗率</th></tr></thead>
+    <tbody>${['red','yellow','green'].map(b=>`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 6px;color:${RISK_BAND[b].c};font-weight:700;white-space:nowrap">${RISK_BAND[b].ic}${RISK_BAND[b].label}</td>
+      <td style="padding:7px 6px;text-align:right">${tot[b]}</td>
+      ${outs.map(o=>`<td style="padding:7px 6px;text-align:right">${M[b][o]||0}</td>`).join('')}
+      <td style="padding:7px 6px;text-align:right;font-weight:700;color:${RISK_BAND[b].c}">${tot[b]?Math.round(fails(b)/tot[b]*100)+'%':'−'}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  // 失敗したのに🟢だった個体（見逃し）と、🔴なのに問題なかった個体
+  const miss=done.filter(x=>x.o!=='親付け継続'&&x.r.band==='green');
+  const li=x=>`<div class="treat-item" onclick="showDetail('${x.a.key}')" style="cursor:pointer"><div><b>${x.a.id5}</b> <span style="color:var(--text2)">${x.a.dob}</span> ${riskBadge(x.r)}</div><div style="font-size:11px;color:var(--text2)">${x.o}</div></div>`;
+  return `
+    <div class="card">
+      <div class="sec-ttl">21日齢時点の判定 × 実際の転帰（転帰が確定した${n}頭）</div>
+      <div class="muted" style="margin-bottom:8px">親付け継続＝離乳まで、または60日齢を過ぎて親付けで問題なし／哺育＝哺育移動・直行・親付けから出戻り</div>
+      ${n?tbl:'<div style="color:var(--text2)">転帰が確定した個体がまだありません。mowmentの治療記録・牛一覧と子牛名簿（死亡）を取り込んでください。</div>'}
+      ${n?`<div style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.7">
+        失敗（9号・哺育・死亡）${allFail}頭のうち、🔴で事前に拾えたのは<b style="color:var(--C)">${fails('red')}頭（${allFail?Math.round(fails('red')/allFail*100):0}%）</b>、🟡まで含めると<b>${fails('red')+fails('yellow')}頭（${allFail?Math.round((fails('red')+fails('yellow'))/allFail*100):0}%）</b>。<br>
+        転帰待ち（親付け中）：🔴${pend.red} / 🟡${pend.yellow} / 🟢${pend.green}頭</div>`:''}
+    </div>
+    ${miss.length?`<div class="sec"><div class="sec-ttl">🟢なのに失敗した個体（${miss.length}頭）＝判定の見直し材料</div><div class="card">${miss.slice(0,40).map(li).join('')}</div></div>`:''}
+    <button class="btn btn-o btn-sm" style="width:100%" onclick="showComparison()">📊 転帰別の特徴を比較</button>`;
+}
+
+function judgeRuleHtml(){
+  const row=(t,p,n)=>`<div class="row"><span>${t}<div class="muted">${n||''}</div></span><span class="row-val">+${p}</span></div>`;
+  return `
+    <div class="card">
+      <div class="sec-ttl">点数のつけ方（${RISK_DECIDE_AGE}日齢までの記録）</div>
+      ${row('DG 0.4未満',2,'（体重−出生体重）÷日齢。14日齢前後で測定')}
+      ${row('DG 0.4〜0.6',1)}
+      ${row('出生体重 34kg未満',2)}
+      ${row('難産介助・ドプラム使用',1,'難産スコア2以上、または出生メモにドプラム/デキサ')}
+      ${row('治療 1〜2クール',1,'mowmentの治療内容「①」＝クール開始')}
+      ${row('治療 3クール以上',2)}
+      ${row('点滴 2日以上',1)}
+      ${row('水様便・血便 3日以上',1)}
+      ${row('40℃以上の発熱 4日以上',2)}
+    </div>
+    <div class="card">
+      <div class="sec-ttl">判定</div>
+      ${['green','yellow','red'].map(b=>`<div class="row"><span style="color:${RISK_BAND[b].c};font-weight:700">${RISK_BAND[b].ic}${RISK_BAND[b].label}（${b==='green'?'0〜1':b==='yellow'?'2〜3':'4以上'}点）</span><span style="font-size:11px;color:var(--text2);text-align:right">過去の失敗率 ${RISK_BAND[b].rate}<br>${RISK_BAND[b].act}</span></div>`).join('')}
+      <div style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.7">
+        作成根拠：2026年5〜9月生まれ・60日齢以上追跡できた491頭（失敗73頭＝9号46・哺育21・死亡6）。<br>
+        「失敗」＝親付け後（または分娩室から直接）9号・哺育へ移動、または死亡。<br>
+        的中度（AUC）：21日齢判定0.82／14日齢＋体重あり0.79／14日齢・体重なし0.74。<b>14日齢で体重を測れば21日齢とほぼ同じ精度で判定できます。</b><br>
+        点数別の失敗率：0点1%・1点5%・2点11%・3点25%・4点42%・5点48%・6点以上65%
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-ttl">運用の流れ</div>
+      <div style="font-size:12px;line-height:1.9">
+        ① 出生当日：出生登録（出生体重・難産スコア・メモ）<br>
+        ② 毎週：mowmentの治療記録（download_*.xlsx）と牛一覧（list_*.xlsx）を設定タブから取り込み<br>
+        ③ 14日齢：体重測定 → 評価入力 → この画面で判定（🔴は哺育準備）<br>
+        ④ 18〜21日齢：最終確認して移動先を決定（詳細画面の「判定を記録」）<br>
+        ⑤ 子牛名簿（死亡）を月1回取り込み → 「過去の個体の評価」で判定の当たり外れを確認
+      </div>
+    </div>`;
+}
+
+// スタッフの決定を記録
+function saveDecision(key,choice){
+  const a=animals.find(x=>x.key===key); if(!a) return;
+  const r=riskJudge(a);
+  a.decision={choice,score:r.score,band:r.band,age:r.ageNow,date:new Date().toISOString()};
+  save(); toast(`耳標${a.id5}：${choice}を記録しました`); showDetail(key);
 }
 
 // ══════ 一覧 ══════
@@ -1079,9 +1317,10 @@ function renderList(){
     const abx=calcAbxDays(a.treats||[]);
     const fr=fosterResult(a);
     const st=fosterStyle(fr.cls);
+    const rk=riskJudge(a);
 
     return `<tr onclick="showDetail('${a.key}')" style="cursor:pointer;border-bottom:1px solid var(--border);">
-      <td style="padding:8px 6px;white-space:nowrap;"><div style="font-weight:700;font-size:13px;">${a.id5}</div></td>
+      <td style="padding:8px 6px;white-space:nowrap;"><div style="font-weight:700;font-size:13px;">${a.id5}</div><div style="margin-top:2px">${riskBadge(rk)}</div></td>
       <td style="padding:8px 6px;font-size:12px;color:var(--text2);white-space:nowrap;">${a.dob||'−'}</td>
       <td style="padding:8px 6px;text-align:center;font-size:12px;">${a.sex==='雄'?'♂':'♀'}</td>
       <td style="padding:8px 6px;text-align:right;font-size:13px;">${a.birthWeight!=null?a.birthWeight:'−'}</td>
@@ -1297,6 +1536,24 @@ function showDetail(key){
       ${fu.outcome==='死亡'&&fu.cause?`<div style="margin-top:8px;padding:8px;background:rgba(224,85,85,.1);border-radius:6px;font-size:12px;"><b>死因:</b> ${fu.cause}${fu.deathDate?` <span style="color:var(--text2)">（${fu.deathDate}）</span>`:''}</div>`:''}
     </div>
 
+    ${(()=>{const r=riskJudge(a);const b=RISK_BAND[r.band];const d=a.decision;
+      return `<div class="sec"><div class="sec-ttl">分娩室での親付け判定（${RISK_DECIDE_AGE}日齢までの記録）</div>
+      <div class="card" style="border-left:4px solid ${b.c};">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          ${riskBadge(r,true)}
+          <span style="font-size:11px;color:var(--text2)">同じ点数の過去の失敗率 <b style="color:${b.c}">${r.rate}%</b></span>
+        </div>
+        <div style="font-size:13px;font-weight:700;margin-top:8px;color:${b.c}">→ ${b.act}</div>
+        <div style="margin-top:8px;">${r.items.length?r.items.map(i=>`<div class="row" style="padding:5px 0"><span style="font-size:12px">${i.t}</span><span class="row-val" style="color:${b.c}">+${i.p}</span></div>`).join(''):'<div style="font-size:12px;color:var(--text2)">リスク要因なし</div>'}</div>
+        ${r.notes.map(n=>`<div style="font-size:11px;color:var(--warn);margin-top:6px">⚠ ${n}</div>`).join('')}
+        <div style="font-size:11px;color:var(--text2);margin-top:8px">現在${r.ageNow}日齢${r.lastImport?` ・治療データ ${r.lastImport} まで`:' ・mowment治療データ未取り込み'}</div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text2)">判定を記録${d&&d.choice?`：<b style="color:var(--text)">${d.choice}</b>（${d.age}日齢・${d.score}点時点・${new Date(d.date).toLocaleDateString('ja-JP')}）`:''}</div>
+        <div class="rank-btns">
+          <button class="rank-btn" style="font-size:12px;${d&&d.choice==='親付け'?'border-color:var(--A);color:var(--A)':''}" onclick="saveDecision('${a.key}','親付け')">🐄親付けへ</button>
+          <button class="rank-btn" style="font-size:12px;${d&&d.choice==='哺育'?'border-color:var(--C);color:var(--C)':''}" onclick="saveDecision('${a.key}','哺育')">🍼哺育へ</button>
+          <button class="rank-btn" style="font-size:12px;${d&&d.choice==='保留'?'border-color:var(--warn);color:var(--warn)':''}" onclick="saveDecision('${a.key}','保留')">⏸保留</button>
+        </div>
+      </div></div>`;})()}
     <div class="sec"><div class="sec-ttl">発育タイムライン</div><div class="tl">${tlDots}</div></div>
     <div class="sec"><div class="sec-ttl">移動履歴</div>${moveHtml}</div>
     <div class="sec"><div class="sec-ttl">評価履歴</div>${evHtml}</div>
@@ -1727,6 +1984,8 @@ function parseMowmentBulk(rows, filename){
   for(let i=0;i<Math.min(rows.length,5);i++){
     const joined=rows[i].map(c=>String(c||'')).join('|');
     if(joined.includes('日時')&&joined.includes('薬品')){ headerRow=i; break; }
+    // mowment 牛一覧（list_*.xlsx：場所・出生日）＝居場所スナップショット
+    if(joined.includes('場所')&&joined.includes('出生日')&&joined.includes('個体識別番号')) return parseMowmentList(rows,i,filename);
   }
   if(headerRow<0) return [{filename,error:'ヘッダー行が見つかりません'}];
 
@@ -1739,6 +1998,7 @@ function parseMowmentBulk(rows, filename){
   const CC =ci['治療内容']??6;
   const CS =ci['症状']??10;
   const CDR=ci['薬品・ワクチン名']??11;
+  const CTMP=ci['体温']??8;
 
   // 個体ごとにグループ化
   const groups={}; // id10 -> rows
@@ -1762,8 +2022,10 @@ function parseMowmentBulk(rows, filename){
     const roomLog=[]; // {dateStr, room, category}
     groups[id10].forEach(r=>{
       const dateRaw=String(r[CD]||'').trim(); if(!dateRaw) return;
-      const m=dateRaw.match(/(\d{4})\/(\d{2})\/(\d{2})/); if(!m) return;
+      const m=dateRaw.match(/(\d{4})\/(\d{2})\/(\d{2})(?:\s*(\d{1,2})時)?/); if(!m) return;
       const dateStr=`${m[1]}-${m[2]}-${m[3]}`;
+      const hour=m[4]||'';
+      const temp=parseTemp(r[CTMP]);
       const content=String(r[CC]||'').trim();
       const symptom=String(r[CS]||'').trim();
       const drugText=String(r[CDR]||'').trim();
@@ -1785,30 +2047,72 @@ function parseMowmentBulk(rows, filename){
       // 抗生剤カウント対象外＝excluded（サポート単体・ワクチンのみ等）
       const excluded=!isAbx && !drip && !blood;
 
-      treats.push({dateStr,staff,disease,drug:drugText,symptom,content,drip,blood,support:isSupport,excluded,imported:true,date:new Date(dateStr).toISOString()});
+      treats.push({dateStr,hour,staff,disease,drug:drugText,symptom,content,temp,drip,blood,support:isSupport,excluded,imported:true,date:new Date(dateStr).toISOString()});
 
-      // 小屋ログ
-      if(room) roomLog.push({dateStr, room, category:classifyRoom(room)});
+      // 小屋ログ（居場所の記録点）
+      if(room) roomLog.push({dateStr, room});
     });
 
-    // 移動履歴を復元（小屋が変わった時点だけ）
-    const moves=[];
-    let prevRoom=null;
-    roomLog.sort((a,b)=>a.dateStr.localeCompare(b.dateStr));
-    roomLog.forEach(rl=>{
-      if(rl.room!==prevRoom){
-        moves.push({dateStr:rl.dateStr, room:rl.room, category:rl.category});
-        prevRoom=rl.room;
-      }
-    });
-
-    if(treats.length>0||moves.length>0) results.push({filename,id10,id5,treats,moves,error:null});
+    if(treats.length>0||roomLog.length>0) results.push({filename,id10,id5,treats,locs:roomLog,error:null});
   });
 
   if(results.length===0){
     return [{filename,error:'登録済み個体に一致する治療記録がありませんでした'}];
   }
   return results;
+}
+
+// mowment 牛一覧（list_YYYYMMDD*.xlsx）＝その日の居場所スナップショット
+function parseMowmentList(rows, hr, filename){
+  const headers=rows[hr].map(h=>String(h||'').trim());
+  const ci={}; headers.forEach((h,i)=>ci[h]=i);
+  const CP=ci['場所'], CID=ci['個体識別番号'], CB=ci['出生日'];
+  // スナップショット日：ファイル名の日付（list_20261115...）。無ければ今日
+  const fm=String(filename).match(/(20\d{2})(\d{2})(\d{2})/);
+  const snap=fm?`${fm[1]}-${fm[2]}-${fm[3]}`:new Date().toISOString().slice(0,10);
+  const byKey={};
+  animals.forEach(a=>{ byKey[a.key]=a; });
+  const results=[];
+  rows.slice(hr+1).forEach(r=>{
+    const id10=String(r[CID]||'').trim(); const room=String(r[CP]||'').trim();
+    if(!id10||!room) return;
+    const bv=r[CB]; const bm=String(bv||'').match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    const dob=bm?`${bm[1]}-${bm[2].padStart(2,'0')}-${bm[3].padStart(2,'0')}`:excelSerialToDate(bv);
+    const key=animalKey(id10.slice(-5), dob);
+    if(!byKey[key]) return; // 未登録はスキップ
+    results.push({filename,id10,id5:id10.slice(-5),key,treats:[],locs:[{dateStr:snap,room}],error:null,isList:true});
+  });
+  if(results.length===0) return [{filename,error:'登録済み個体が牛一覧に見つかりませんでした'}];
+  return results;
+}
+
+// 体温の文字列（"39.7" "40℃" "2026102609時 40℃"）→数値
+function parseTemp(v){
+  if(v==null||v==='') return null;
+  if(typeof v==='number') return (v>30&&v<45)?v:null;
+  const m=String(v).match(/(\d{2}(?:\.\d+)?)\s*℃?\s*$/);
+  if(!m) return null;
+  const t=parseFloat(m[1]); return (t>30&&t<45)?t:null;
+}
+
+function treatOutOfRange(a,dateStr){
+  const age=(new Date(dateStr)-new Date(a.dob))/864e5;
+  return age<0||age>200;
+}
+
+// 居場所の記録点（locs）から移動履歴（moves）を作り直す
+function rebuildMoves(a){
+  const dobDate=new Date(a.dob);
+  const locs=(a.locs||[]).slice().sort((x,y)=>x.dateStr.localeCompare(y.dateStr));
+  const moves=[]; let prev=null;
+  locs.forEach(l=>{
+    if(l.room!==prev){
+      moves.push({dateStr:l.dateStr, room:l.room, category:classifyRoom(l.room),
+        age:Math.max(0,Math.round((new Date(l.dateStr)-dobDate)/864e5))});
+      prev=l.room;
+    }
+  });
+  a.moves=moves;
 }
 
 // 小屋名から移動先カテゴリを判定
@@ -1819,6 +2123,8 @@ function classifyRoom(room){
   if(/[9９]\s*(親|維)/.test(r)) return '9号(弱牛区)';
   // 親付け：「親」または「維」（維持の略）を含む
   if(r.includes('親')||r.includes('維')) return '親付け';
+  // 離乳後の育成舎
+  if(r.includes('育成')) return '育成';
   // 哺育：哺育・ロボット・D-数字
   if(r.includes('哺育')||r.includes('ロボット')||/^D-?\d/.test(r)) return '哺育';
   // 分娩室：A〜I（半角・全角・ローマ数字Ⅰ〜Ⅸ）
@@ -1832,14 +2138,22 @@ function renderImportPreview(){
   const errors=importQueue.filter(i=>i.error);
 
   let html='';
+  const listItems=valid.filter(i=>i.isList);
+  const treatItems=valid.filter(i=>!i.isList);
+  const nAnimals=new Set(valid.map(i=>i.id5)).size;
   if(valid.length>0){
     html+=`<div style="margin-top:10px;margin-bottom:8px;display:flex;gap:8px;">
-      <button class="btn btn-p btn-sm" onclick="commitAllImports()">✓ ${valid.length}頭を一括取り込み</button>
+      <button class="btn btn-p btn-sm" onclick="commitAllImports()">✓ ${nAnimals}頭分を一括取り込み</button>
     </div>`;
   }
+  if(listItems.length>0){
+    const files={}; listItems.forEach(i=>{ files[i.filename]=(files[i.filename]||0)+1; });
+    html+=`<div class="card-sm" style="margin-top:6px;font-size:11px;color:var(--text2)">📍 牛一覧（居場所）${Object.keys(files).length}ファイル：${Object.entries(files).map(([f,n])=>`${f} ${n}頭`).join(' / ')}</div>`;
+  }
+  html+=errors.map(item=>`<div style="color:var(--warn);font-size:11px;padding:4px 0">${item.filename}: ${item.error}</div>`).join('');
+  if(treatItems.length>30) html+=`<div style="font-size:11px;color:var(--text2);padding:4px 0">治療記録：${treatItems.length}件（先頭30件を表示）</div>`;
 
-  html+=importQueue.map((item,qi)=>{
-    if(item.error) return`<div style="color:var(--warn);font-size:11px;padding:4px 0">${item.filename}: ${item.error}</div>`;
+  html+=treatItems.slice(0,30).map((item,qi)=>{
     const abx=calcAbxDays(item.treats);
     const support=calcSupportDays(item.treats);
     const drip=item.treats.filter(t=>t.drip).length;
@@ -1866,42 +2180,63 @@ function commitAllImports(){
   const valid=importQueue.filter(i=>!i.error);
   let totalAnimals=0, totalTreats=0, totalMoves=0;
 
+  // 同じ下5桁の個体が複数いる場合は、記録日が生後0〜200日に入る個体に振り分ける
+  const pickAnimal=(item,dateStr)=>{
+    if(item.key) return animals.find(x=>x.key===item.key);
+    const c=animals.filter(x=>x.id5===item.id5);
+    const d=new Date(dateStr);
+    return c.find(x=>{ const age=(d-new Date(x.dob))/864e5; return age>=0&&age<=200; });
+  };
+  const touched=new Set();
   valid.forEach(item=>{
-    const a=animals.find(x=>x.id5===item.id5);
-    if(!a) return;
-    if(!a.treats) a.treats=[];
-    const dobDate=new Date(a.dob);
     let added=0;
     item.treats.forEach(t=>{
-      // 同日・同薬剤の重複チェック
-      if(a.treats.find(ex=>ex.dateStr===t.dateStr&&ex.drug===t.drug&&ex.imported)) return;
+      const a=pickAnimal(item,t.dateStr); if(!a) return;
+      if(!a.treats) a.treats=[];
+      const dobDate=new Date(a.dob);
+      // 同日・同時刻・同薬剤の重複チェック（既存記録に体温・時刻等が無ければ補完）
+      const ex=a.treats.find(e=>e.imported&&e.dateStr===t.dateStr&&e.drug===t.drug&&(!e.hour||!t.hour||e.hour===t.hour));
+      if(ex){
+        ['hour','temp','content','symptom'].forEach(f=>{ if((ex[f]==null||ex[f]==='')&&t[f]!=null&&t[f]!==''){ ex[f]=t[f]; touched.add(a.key);} });
+        return;
+      }
       const age=Math.round((new Date(t.dateStr)-dobDate)/(1000*60*60*24));
       a.treats.push({...t,age:Math.max(0,age)});
-      added++;
+      added++; touched.add(a.key);
     });
-    if(added>0){ a.treats.sort((x,y)=>x.age-y.age); totalTreats+=added; }
-
-    // 移動履歴を保存（日齢を計算して上書き）
-    if(item.moves&&item.moves.length>0){
-      a.moves=item.moves.map(m=>({
-        ...m,
-        age:Math.max(0,Math.round((new Date(m.dateStr)-dobDate)/(1000*60*60*24)))
-      }));
-      totalMoves+=a.moves.length;
-    }
-    if(added>0||(item.moves&&item.moves.length>0)) totalAnimals++;
+    totalTreats+=added;
+    // 居場所の記録点を追加して移動履歴を作り直す
+    (item.locs||[]).forEach(l=>{
+      const a=pickAnimal(item,l.dateStr); if(!a) return;
+      if(!a.locs){ a.locs=(a.moves||[]).filter(m=>m.dateStr).map(m=>({dateStr:m.dateStr,room:m.room})); }
+      if(a.locs.some(x=>x.dateStr===l.dateStr&&x.room===l.room)) return;
+      a.locs.push(l); touched.add(a.key); totalMoves++;
+    });
   });
+  // 旧バージョンの取り込みで、別年の同じ下5桁の個体の治療が紐付いたもの（生年月日より前・200日超）を除去
+  animals.forEach(a=>{
+    const n0=(a.treats||[]).length;
+    a.treats=(a.treats||[]).filter(t=>!t.imported||!t.dateStr||!treatOutOfRange(a,t.dateStr));
+    if(a.treats.length!==n0) touched.add(a.key);
+    if(a.locs){ const l0=a.locs.length; a.locs=a.locs.filter(l=>!treatOutOfRange(a,l.dateStr)); if(a.locs.length!==l0) touched.add(a.key); }
+  });
+  touched.forEach(k=>{
+    const a=animals.find(x=>x.key===k); if(!a) return;
+    (a.treats||[]).sort((x,y)=>x.age-y.age||String(x.hour||'').localeCompare(String(y.hour||'')));
+    if(a.locs) rebuildMoves(a);
+  });
+  totalAnimals=touched.size;
 
   save();
-  toast(`${totalAnimals}頭：治療${totalTreats}件・移動${totalMoves}件を取り込みました`, 3500);
+  toast(`${totalAnimals}頭：治療${totalTreats}件・居場所${totalMoves}件を取り込みました`, 3500);
   importQueue=[];
-  document.getElementById('import-preview').innerHTML=`<div style="color:var(--acc);font-size:12px;padding:8px 0">✓ 取り込み完了（${totalAnimals}頭 / 治療${totalTreats}件 / 移動${totalMoves}件）</div>`;
+  document.getElementById('import-preview').innerHTML=`<div style="color:var(--acc);font-size:12px;padding:8px 0">✓ 取り込み完了（${totalAnimals}頭 / 治療${totalTreats}件 / 居場所${totalMoves}件）</div>`;
 }
 
 // ══════ 死亡名簿の取り込み ══════
 function excelSerialToDate(serial){
   if(serial==null||serial==='') return null;
-  const n=parseFloat(serial);
+  const n=Number(serial);
   if(isNaN(n)) {
     // すでに日付文字列の場合
     const m=String(serial).match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -1955,8 +2290,10 @@ function handleDeathImport(input){
         // 下5桁一致
         const cands=deaths.filter(d=>d.id5===a.id5);
         let hit=null;
-        if(cands.length===1) hit=cands[0];
-        else if(cands.length>1) hit=cands.find(d=>d.dob===a.dob); // 複数なら生年月日で確定
+        // 生年月日がある場合は必ず一致を確認（前年の同じ下5桁を誤って拾わない）
+        const withDob=cands.filter(d=>d.dob);
+        if(withDob.length) hit=withDob.find(d=>d.dob===a.dob)||null;
+        else if(cands.length===1) hit=cands[0];
         if(hit){
           a.followup=a.followup||{};
           a.followup.outcome='死亡';
@@ -2021,11 +2358,17 @@ function mergeAnimals(imported){
     });
     ex.evals&&ex.evals.sort((a,b)=>new Date(a.date)-new Date(b.date));
     (inc.treats||[]).forEach(t=>{
-      const dup=(ex.treats||[]).find(e=>(e.dateStr&&e.dateStr===t.dateStr&&e.drug===t.drug)||(e.age===t.age&&e.disease===t.disease&&!t.dateStr&&!e.dateStr));
+      const dup=(ex.treats||[]).find(e=>(e.dateStr&&e.dateStr===t.dateStr&&e.drug===t.drug&&(!e.hour||!t.hour||e.hour===t.hour))||(e.age===t.age&&e.disease===t.disease&&!t.dateStr&&!e.dateStr));
       if(!dup){ if(!ex.treats) ex.treats=[]; ex.treats.push(t); s.newTreats++; }
+      else ['hour','temp','content','symptom'].forEach(f=>{ if((dup[f]==null||dup[f]==='')&&t[f]!=null&&t[f]!=='') dup[f]=t[f]; });
     });
     ex.treats&&ex.treats.sort((a,b)=>a.age-b.age);
-    if(inc.moves&&inc.moves.length>(ex.moves||[]).length) ex.moves=inc.moves;
+    if(inc.locs&&inc.locs.length){
+      if(!ex.locs) ex.locs=(ex.moves||[]).filter(m=>m.dateStr).map(m=>({dateStr:m.dateStr,room:m.room}));
+      inc.locs.forEach(l=>{ if(!ex.locs.some(x=>x.dateStr===l.dateStr&&x.room===l.room)) ex.locs.push(l); });
+      rebuildMoves(ex);
+    } else if(inc.moves&&inc.moves.length>(ex.moves||[]).length) ex.moves=inc.moves;
+    if(inc.decision?.date&&(!ex.decision?.date||new Date(inc.decision.date)>new Date(ex.decision.date))) ex.decision=inc.decision;
     if(inc.followup?.date){ const ed=new Date(ex.followup?.date||0); if(new Date(inc.followup.date)>ed) ex.followup=inc.followup; }
   });
   animals.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
@@ -2046,12 +2389,14 @@ function renderMergeResult(s){
 
 // ══════ Excel エクスポート ══════
 function exportXlsx(){
-  const master=[['耳標','生年月日','母牛番号','性別','品種','出生体重kg','難産スコア','評価回数','抗生剤日数','サポート日数','点滴日数','輸血','移動回数','親付け適性','最終ランク','離乳DG','離乳日齢','転帰','死因']];
+  const master=[['耳標','生年月日','母牛番号','性別','品種','出生体重kg','難産スコア','評価回数','抗生剤日数','サポート日数','点滴日数','輸血','移動回数','親付け適性','最終ランク','離乳DG','離乳日齢','転帰','死因','判定点数','分娩室判定','判定状態','DG(21日まで)','治療クール','点滴日数(21日まで)','水様便日数','発熱日数','判定理由','スタッフ決定']];
   animals.forEach(a=>{
     const last=(a.evals||[]).slice(-1)[0]; const fu=a.followup||{};
     const t30=(a.treats||[]).filter(t=>t.age<=30);
     const moveCount=(a.moves||[]).length>0?(a.moves.length-1):0;
-    master.push([a.id5,a.dob,a.dam,a.sex,a.breed,a.birthWeight||'',a.dystocia,(a.evals||[]).length,calcAbxDays(t30),calcSupportDays(t30),calcDripDays(t30),t30.some(t=>t.blood)?'有':'',moveCount,fosterResult(a).label,last?.rank||'',fu.dg||'',fu.weaned||'',fu.outcome||'',fu.cause||'']);
+    const rk=riskJudge(a);
+    master.push([a.id5,a.dob,a.dam,a.sex,a.breed,a.birthWeight||'',a.dystocia,(a.evals||[]).length,calcAbxDays(t30),calcSupportDays(t30),calcDripDays(t30),t30.some(t=>t.blood)?'有':'',moveCount,fosterResult(a).label,last?.rank||'',fu.dg||'',fu.weaned||'',fu.outcome||'',fu.cause||'',
+      rk.score,RISK_BAND[rk.band].label,rk.status,rk.dg!=null?+rk.dg.toFixed(3):'',rk.courses,rk.drip,rk.watery,rk.fever,rk.items.map(i=>`${i.t}+${i.p}`).join(' / '),a.decision?.choice||'']);
   });
   const evals=[['耳標','生年月日','評価タイプ','日齢','体重kg','哺乳行動','ランク','根拠・コメント','評価日時']];
   animals.forEach(a=>{ (a.evals||[]).forEach(ev=>evals.push([a.id5,a.dob,ev.type,ev.age,ev.weight||'',ev.nursing,ev.rank||'',ev.reasoning||'',ev.date])); });
