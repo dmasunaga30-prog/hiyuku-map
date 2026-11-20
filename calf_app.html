@@ -2066,7 +2066,7 @@ function parseMowmentBulk(rows, filename){
 function parseMowmentList(rows, hr, filename){
   const headers=rows[hr].map(h=>String(h||'').trim());
   const ci={}; headers.forEach((h,i)=>ci[h]=i);
-  const CP=ci['場所'], CID=ci['個体識別番号'], CB=ci['出生日'];
+  const CP=ci['場所'], CID=ci['個体識別番号'], CB=ci['出生日'], CDT=ci['日付'];
   // スナップショット日：ファイル名の日付（list_20261115...）。無ければ今日
   const fm=String(filename).match(/(20\d{2})(\d{2})(\d{2})/);
   const snap=fm?`${fm[1]}-${fm[2]}-${fm[3]}`:new Date().toISOString().slice(0,10);
@@ -2080,7 +2080,10 @@ function parseMowmentList(rows, hr, filename){
     const dob=bm?`${bm[1]}-${bm[2].padStart(2,'0')}-${bm[3].padStart(2,'0')}`:excelSerialToDate(bv);
     const key=animalKey(id10.slice(-5), dob);
     if(!byKey[key]) return; // 未登録はスキップ
-    results.push({filename,id10,id5:id10.slice(-5),key,treats:[],locs:[{dateStr:snap,room}],error:null,isList:true});
+    // まとめファイルは行ごとに「日付」列を持つ
+    let ds=snap;
+    if(CDT!=null){ const dm=String(r[CDT]||'').match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/); if(dm) ds=`${dm[1]}-${dm[2].padStart(2,'0')}-${dm[3].padStart(2,'0')}`; else if(typeof r[CDT]==='number') ds=excelSerialToDate(r[CDT]); }
+    results.push({filename,id10,id5:id10.slice(-5),key,treats:[],locs:[{dateStr:ds,room}],error:null,isList:true});
   });
   if(results.length===0) return [{filename,error:'登録済み個体が牛一覧に見つかりませんでした'}];
   return results;
